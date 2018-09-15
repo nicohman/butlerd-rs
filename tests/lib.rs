@@ -3,6 +3,8 @@ use butlerd::Butler;
 #[test]
 fn fetchall () {
     let b = Butler::new();
-    println!("{}{}",b.secret,b.address);
-    b.fetchall();
+    let games =b.fetchall();
+    for game in games {
+        println!("{}", game.game.title);
+    }
 }

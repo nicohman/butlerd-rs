@@ -8,7 +8,7 @@ pub struct BStart {
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Game {
-    pub id:String,
+    pub id:i32,
     pub url:String,
     pub title:String
 }
@@ -16,4 +16,15 @@ pub struct Game {
 pub struct Cave {
     pub id: String,
     pub game:Game
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Response {
+    pub id:i32,
+    pub jsonrpc:String
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct FetchCaves  {
+    #[serde(flatten)]
+    pub response:Response,
+    pub result: Map<String, Value>
 }
