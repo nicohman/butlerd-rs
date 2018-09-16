@@ -167,6 +167,15 @@ impl Butler {
         let mut profile: Profile = serde_json::from_str(&profR.result["profile"].to_string()).unwrap();
         profile
     }
+    pub fn fetch_profile_games(&self, profile_id: i32) -> Vec<ProfileGame> {
+       let mut pvs = self.request(Method::Post, "/call/Fetch.ProfileGames".to_string(), "{\"profileId\":\"".to_string()+&profile_id.to_string()+"\"}").expect("Couldn't fetch profile games");
+        let mut profR: ResponseRes = serde_json::from_str(&pvs).unwrap();
+        let mut games = profR.result["items"].as_array().unwrap().iter().map(|x| {
+            let mut new : ProfileGame = serde_json::from_str(&x.to_string()).unwrap();
+            return new;
+        }).collect::<Vec<ProfileGame>>();
+        games
+    }
 }
 fn get_home() -> String {
     return String::from(env::home_dir().unwrap().to_str().unwrap());
