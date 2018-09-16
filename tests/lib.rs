@@ -6,9 +6,9 @@ thread_local!(static b : Butler = Butler::new());
 fn fetchall() {
     b.with(|but| {
         let games = but.fetchall();
-        for game in games {
+        /*for game in games {
             println!("{}", game.game.title);
-        }
+        }*/
     });
 }
 #[test]
@@ -38,17 +38,16 @@ fn launch_game() {
 #[ignore]
 fn login_api_key() {
     b.with(|but| {
-        let mut key = env::var_os("ITCH_API");
+        let key = env::var_os("ITCH_API");
         if key.is_some() {
-            let profile = but.login_api_key(key.unwrap().into_string().unwrap());
-
+            but.login_api_key(key.unwrap().into_string().unwrap());
         }
     });
 }
 #[test]
 fn check_sale_none() {
     b.with(|but| {
-        let mut sale = but.fetch_sale(248620);
+        let sale = but.fetch_sale(248620);
         assert!(sale.is_none());
     });
 }
