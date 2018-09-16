@@ -45,3 +45,10 @@ fn login_api_key() {
         }
     });
 }
+#[test]
+fn check_sale_none() {
+    b.with(|but| {
+        let mut sale = but.fetch_sale(248620);
+        assert!(sale.is_none());
+    });
+}

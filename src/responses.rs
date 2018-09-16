@@ -38,13 +38,13 @@ pub struct ProfileGame {
     pub viewsCount: i32,
     pub downloadsCount: i32,
     pub purchasesCount: i32,
-    pub published: bool
+    pub published: bool,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Profile {
     pub id: i32,
     pub lastConnected: String,
-    pub user: User
+    pub user: User,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Upload {
@@ -115,4 +115,12 @@ pub struct ResponseRes {
     #[serde(flatten)]
     pub response: Response,
     pub result: Map<String, Value>,
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Sale {
+    pub id: i32,
+    pub gameId: i32,
+    pub rate: i32,
+    pub startDate: String,
+    pub endDate: String
 }

@@ -160,21 +160,49 @@ impl Butler {
             "{\"caveId\":\"".to_string() + &caveId + "\",\"prereqsDir\":\"" + &self.pre_dir + "\"}",
         ).expect("Couldn't launch game");
     }
-    pub fn login_api_key(&self, api_key:String) -> Profile {
-        let mut pvs = self.request(Method::Post, "/call/Profile.LoginWithAPIKey".to_string(),"{\"apiKey\":\"".to_string()+&api_key+"\"}").expect("Couldn't login with Api key");
-        println!("{}",pvs);
-        let mut profR :ResponseRes = serde_json::from_str(&pvs).unwrap();
-        let mut profile: Profile = serde_json::from_str(&profR.result["profile"].to_string()).unwrap();
+    pub fn login_api_key(&self, api_key: String) -> Profile {
+        let mut pvs = self.request(
+            Method::Post,
+            "/call/Profile.LoginWithAPIKey".to_string(),
+            "{\"apiKey\":\"".to_string() + &api_key + "\"}",
+        ).expect("Couldn't login with Api key");
+        println!("{}", pvs);
+        let mut profR: ResponseRes = serde_json::from_str(&pvs).unwrap();
+        let mut profile: Profile = serde_json::from_str(&profR.result["profile"].to_string())
+            .unwrap();
         profile
     }
     pub fn fetch_profile_games(&self, profile_id: i32) -> Vec<ProfileGame> {
-       let mut pvs = self.request(Method::Post, "/call/Fetch.ProfileGames".to_string(), "{\"profileId\":\"".to_string()+&profile_id.to_string()+"\"}").expect("Couldn't fetch profile games");
+        let mut pvs = self.request(
+            Method::Post,
+            "/call/Fetch.ProfileGames".to_string(),
+            "{\"profileId\":\"".to_string() + &profile_id.to_string() + "\"}",
+        ).expect("Couldn't fetch profile games");
         let mut profR: ResponseRes = serde_json::from_str(&pvs).unwrap();
-        let mut games = profR.result["items"].as_array().unwrap().iter().map(|x| {
-            let mut new : ProfileGame = serde_json::from_str(&x.to_string()).unwrap();
-            return new;
-        }).collect::<Vec<ProfileGame>>();
+        let mut games = profR.result["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| {
+                let mut new: ProfileGame = serde_json::from_str(&x.to_string()).unwrap();
+                return new;
+            })
+            .collect::<Vec<ProfileGame>>();
         games
+    }
+    pub fn fetch_sale(&self, game_id: i32) -> Option<Sale> {
+        let mut sls = self.request(
+            Method::Post,
+            "/call/Fetch.Sale".to_string(),
+            "{\"gameId\":".to_string() + &game_id.to_string() + "}",
+        ).expect("Couldn't fetch sale");
+        let mut saleR: ResponseRes = serde_json::from_str(&sls).unwrap();
+        if saleR.result.contains_key("sale") && !saleR.result["sale"].is_null() {
+            let mut sale : Sale = serde_json::from_str(&saleR.result["sale"].to_string()).unwrap();
+            return Some(sale);
+        } else {
+            return None;
+        }
     }
 }
 fn get_home() -> String {
