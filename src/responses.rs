@@ -21,15 +21,15 @@ pub struct Game {
     #[serde(default)]
     pub minPrice: i32,
     pub canBeBought: bool,
-    #[serde(default)]    
+    #[serde(default)]
     pub hasDemo: bool,
-    #[serde(default)]        
+    #[serde(default)]
     pub inPressSystem: bool,
     pub user: Option<User>,
     pub userId: Option<i32>,
     pub viewsCount: Option<i32>,
-    pub downloadsCount:Option<i32>,
-    pub purchasesCount:Option<i32>,
+    pub downloadsCount: Option<i32>,
+    pub purchasesCount: Option<i32>,
     pub published: Option<bool>,
 }
 #[derive(Serialize, Deserialize, Debug)]

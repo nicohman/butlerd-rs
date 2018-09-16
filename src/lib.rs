@@ -16,19 +16,33 @@ static DB_PATH: &str = "";
 static DB_PATH: &str = "~/.config/itch/db/butler.db";
 #[cfg(target_os = "windows")]
 static DB_PATH: &str = "";
+#[cfg(target_os = "macos")]
+static LOG_PATH: &str = "";
+#[cfg(target_os = "linux")]
+static LOG_PATH: &str = "/tmp/butlerdrs.log";
+#[cfg(target_os = "windows")]
+static LOG_PATH: &str = "";
+#[cfg(target_os = "macos")]
+static PRE_PATH: &str = "";
+#[cfg(target_os = "linux")]
+static PRE_PATH: &str = "~/.config/itch/prereqs";
+#[cfg(target_os = "windows")]
+static PRE_PATH: &str = "";
 pub struct Butler {
     pub secret: String,
     pub address: String,
     pub client: reqwest::Client,
+    pub pre_dir: String,
 }
 impl Butler {
     pub fn new() -> Butler {
+        fs::remove_file(LOG_PATH);
         let ch = Command::new("sh")
             .arg("-c")
             .arg(
                 "butler daemon --json --dbpath=".to_string() +
                     &DB_PATH.replace("~", &get_home()) + " --destiny-pid=" +
-                    &::std::process::id().to_string() + " > /tmp/butlerdrs.log",
+                    &::std::process::id().to_string() + " > " + LOG_PATH,
             )
             .spawn()
             .expect("Couldn't start butler daemon");
@@ -39,32 +53,44 @@ impl Butler {
             .read_to_string(&mut bd)
             .unwrap();
         bd = bd.replace("\\\"", "");
+        bd = bd.lines().next().unwrap().to_string();
         let pmeta: BStart =
             serde_json::from_str(&bd.trim()).expect("Couldn't deserialze butler start");
+        let mut secret = pmeta.secret.to_string();
+        let mut headers = reqwest::header::Headers::new();
+        headers.set_raw("X-Secret", secret.as_bytes());
+        headers.set_raw("X-ID", "0");
+        let mut client = reqwest::Client::builder();
+        client.default_headers(headers);
+        client.timeout(None);
+        let mut built = client.build().unwrap();
+
         Butler {
-            secret: pmeta.secret.to_string(),
+            secret: secret,
             address: pmeta.http[&"address".to_string()].to_string().replace(
                 "\"",
                 "",
             ),
-            client: reqwest::Client::new(),
+            client: built,
+            pre_dir: PRE_PATH.to_string().replace("~", &get_home()),
         }
     }
+    pub fn close(&self) {
+        self.request(Method::Post, "/Meta.Shutdown".to_string(), "{}".to_string())
+            .expect("Couldn't shut down butler daemon");;
+    }
     fn request(&self, method: Method, path: String, params: String) -> Result<String, String> {
-        let mut headers = reqwest::header::Headers::new();
-        headers.set_raw("X-Secret", self.secret.as_bytes());
-        headers.set_raw("X-ID", "0");
         let url = "http://".to_string() + &self.address.clone() + &path;
-        let mut res = self.client
-            .request(method, &url)
-            .headers(headers)
-            .body(params)
-            .send()
-            .unwrap();
-        if res.status().is_success() {
-            Ok(res.text().unwrap())
+        let mut res = self.client.request(method, &url).body(params).send();
+        if res.is_ok() {
+            let mut res = res.unwrap();
+            if res.status().is_success() {
+                Ok(res.text().unwrap())
+            } else {
+                Err("No".to_string())
+            }
         } else {
-            Err("No".to_string())
+            Err("Timed out".to_string())
         }
     }
     pub fn fetchall(&self) -> Vec<Cave> {
@@ -94,6 +120,23 @@ impl Butler {
         let mut gameR: ResponseRes = serde_json::from_str(&gvs).unwrap();
         let mut game: Game = serde_json::from_str(&gameR.result["game"].to_string()).unwrap();
         game
+    }
+    pub fn fetch_cave(&self, id: String) -> Cave {
+        let cvs = self.request(
+            Method::Post,
+            "/call/Fetch.Cave".to_string(),
+            "{\"caveId\":\"".to_string() + &id + "\"}",
+        ).expect("Couldn't fetch cave");
+        let mut caveR: ResponseRes = serde_json::from_str(&cvs).unwrap();
+        let mut cave: Cave = serde_json::from_str(&caveR.result["cave"].to_string()).unwrap();
+        cave
+    }
+    pub fn launch_game(&self, caveId: String) {
+        self.request(
+            Method::Post,
+            "/call/Launch".to_string(),
+            "{\"caveId\":\"".to_string() + &caveId + "\",\"prereqsDir\":\"" + &self.pre_dir + "\"}",
+        ).expect("Couldn't launch game");
     }
 }
 fn get_home() -> String {
