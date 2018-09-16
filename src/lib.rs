@@ -63,14 +63,14 @@ impl Butler {
         let pmeta: BStart =
             serde_json::from_str(&bd.trim()).expect("Couldn't deserialze butler start");
         let secret = pmeta.secret.to_string();
-        let mut headers = reqwest::header::Headers::new();
-        headers.set_raw("X-Secret", secret.as_bytes());
-        headers.set_raw("X-ID", "0");
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("X-Secret", secret.parse().unwrap());
+        headers.insert("X-ID", "0".parse().unwrap());
         let mut client = reqwest::Client::builder();
         let mut client_launch = reqwest::Client::builder();
-        client_launch.default_headers(headers.clone());
-        client.default_headers(headers);
-        client_launch.timeout(None);
+        client_launch = client_launch.default_headers(headers.clone());
+        client = client.default_headers(headers);
+        client_launch = client_launch.timeout(None);
         let built = client.build().unwrap();
         let builtl = client_launch.build().unwrap();
         Butler {
@@ -86,7 +86,7 @@ impl Butler {
     }
     ///Shuts down butler daemon.
     pub fn close(&self) {
-        self.request(Method::Post, "/Meta.Shutdown".to_string(), "{}".to_string())
+        self.request(Method::POST, "/Meta.Shutdown".to_string(), "{}".to_string())
             .expect("Couldn't shut down butler daemon");;
     }
     fn make_request(
@@ -124,7 +124,7 @@ impl Butler {
     /// Fetchs all installed caves
     pub fn fetchall(&self) -> Vec<Cave> {
         let cvs = self.request(
-            Method::Post,
+            Method::POST,
             "/call/Fetch.Caves".to_string(),
             "{}".to_string(),
         ).unwrap();
@@ -143,7 +143,7 @@ impl Butler {
     ///Fetches specific game by id
     pub fn fetch_game(&self, game_id: i32) -> Game {
         let gvs = self.request(
-            Method::Post,
+            Method::POST,
             "/call/Fetch.Game".to_string(),
             "{\"gameId\":".to_string() + &game_id.to_string() + "}",
         ).unwrap();
@@ -154,7 +154,7 @@ impl Butler {
     ///Fetches specific cave by id
     pub fn fetch_cave(&self, cave_id: String) -> Cave {
         let cvs = self.request(
-            Method::Post,
+            Method::POST,
             "/call/Fetch.Cave".to_string(),
             "{\"caveId\":\"".to_string() + &cave_id + "\"}",
         ).expect("Couldn't fetch cave");
@@ -165,7 +165,7 @@ impl Butler {
     /// Launches game by CaveID. Note that this will not complete until the game is closed.
     pub fn launch_game(&self, cave_id: String) {
         self.request_l(
-            Method::Post,
+            Method::POST,
             "/call/Launch".to_string(),
             "{\"caveId\":\"".to_string() + &cave_id + "\",\"prereqsDir\":\"" + &self.pre_dir +
                 "\"}",
@@ -174,7 +174,7 @@ impl Butler {
     /// Given an API key, logs into a profile and returns profile.
     pub fn login_api_key(&self, api_key: String) -> Profile {
         let pvs = self.request(
-            Method::Post,
+            Method::POST,
             "/call/Profile.LoginWithAPIKey".to_string(),
             "{\"apiKey\":\"".to_string() + &api_key + "\"}",
         ).expect("Couldn't login with Api key");
@@ -186,7 +186,7 @@ impl Butler {
     /// Fetches a vec of games owned by a specific profile id
     pub fn fetch_profile_games(&self, profile_id: i32) -> Vec<ProfileGame> {
         let pvs = self.request(
-            Method::Post,
+            Method::POST,
             "/call/Fetch.ProfileGames".to_string(),
             "{\"profileId\":\"".to_string() + &profile_id.to_string() + "\"}",
         ).expect("Couldn't fetch profile games");
@@ -205,7 +205,7 @@ impl Butler {
     /// Fetches the best available sale for a game(if such a sale exists)
     pub fn fetch_sale(&self, game_id: i32) -> Option<Sale> {
         let sls = self.request(
-            Method::Post,
+            Method::POST,
             "/call/Fetch.Sale".to_string(),
             "{\"gameId\":".to_string() + &game_id.to_string() + "}",
         ).expect("Couldn't fetch sale");
@@ -216,6 +216,24 @@ impl Butler {
         } else {
             return None;
         }
+    }
+    pub fn get_install_locations(&self) -> Vec<InstallLocationSummary> {
+        let ils = self.request(
+            Method::POST,
+            "/call/Install.Locations.List".to_string(),
+            "{}".to_string(),
+        ).expect("Couldn't get install locations");
+        let install_r: ResponseRes = serde_json::from_str(&ils).unwrap();
+        let idirs = install_r.result["installLocations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| {
+                let new: InstallLocationSummary = serde_json::from_str(&x.to_string()).unwrap();
+                new
+            })
+            .collect::<Vec<InstallLocationSummary>>();
+        return idirs;
     }
 }
 fn get_home() -> String {

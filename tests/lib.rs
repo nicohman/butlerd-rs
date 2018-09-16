@@ -51,3 +51,10 @@ fn check_sale_none() {
         assert!(sale.is_none());
     });
 }
+#[test]
+fn get_install_locations() {
+    b.with(|but| {
+        let locations = but.get_install_locations();
+        assert!(locations.len() > 0);
+    });
+}

@@ -74,7 +74,7 @@ pub struct Upload {
     #[serde(flatten)]
     pub dates: Dates,
 }
-///An itch user's basic public info 
+///An itch user's basic public info
 #[derive(Serialize, Deserialize, Debug)]
 pub struct User {
     pub id: i32,
@@ -144,4 +144,21 @@ pub struct Sale {
     ///Can be negative due to [reverse sales](https://itch.io/updates/introducing-reverse-sales)
     pub startDate: String,
     pub endDate: String,
+}
+/// Info on a game install location
+#[derive(Serialize, Deserialize, Debug)]
+pub struct InstallLocationSummary {
+    pub id: String,
+    pub path: String,
+    pub sizeInfo: InstallLocationSizeInfo,
+}
+/// Info on storage usage for an install location
+#[derive(Serialize, Deserialize, Debug)]
+pub struct InstallLocationSizeInfo {
+    /// Number of bytes used by currently installed games
+    pub installedSize: i64,
+    /// Negative if unknown
+    pub freeSize: i64,
+    /// Negative if unknown
+    pub totalSize: i64,
 }
