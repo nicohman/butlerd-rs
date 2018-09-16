@@ -33,6 +33,12 @@ pub struct Game {
     pub published: Option<bool>,
 }
 #[derive(Serialize, Deserialize, Debug)]
+pub struct Profile {
+    pub id: i32,
+    pub lastConnected: String,
+    pub user: User
+}
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Upload {
     pub id: i32,
     pub storage: String,

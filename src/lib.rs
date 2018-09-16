@@ -33,6 +33,7 @@ pub struct Butler {
     pub address: String,
     pub client: reqwest::Client,
     pub pre_dir: String,
+    pub client_launch: reqwest::Client,
 }
 impl Butler {
     pub fn new() -> Butler {
@@ -61,10 +62,12 @@ impl Butler {
         headers.set_raw("X-Secret", secret.as_bytes());
         headers.set_raw("X-ID", "0");
         let mut client = reqwest::Client::builder();
+        let mut client_launch = reqwest::Client::builder();
+        client_launch.default_headers(headers.clone());
         client.default_headers(headers);
-        client.timeout(None);
+        client_launch.timeout(None);
         let mut built = client.build().unwrap();
-
+        let mut builtl = client_launch.build().unwrap();
         Butler {
             secret: secret,
             address: pmeta.http[&"address".to_string()].to_string().replace(
@@ -73,15 +76,27 @@ impl Butler {
             ),
             client: built,
             pre_dir: PRE_PATH.to_string().replace("~", &get_home()),
+            client_launch: builtl,
         }
     }
     pub fn close(&self) {
         self.request(Method::Post, "/Meta.Shutdown".to_string(), "{}".to_string())
             .expect("Couldn't shut down butler daemon");;
     }
-    fn request(&self, method: Method, path: String, params: String) -> Result<String, String> {
+    fn make_request(
+        &self,
+        method: Method,
+        path: String,
+        params: String,
+        client: String,
+    ) -> Result<String, String> {
+        let mut res: Result<reqwest::Response, reqwest::Error>;
         let url = "http://".to_string() + &self.address.clone() + &path;
-        let mut res = self.client.request(method, &url).body(params).send();
+        if (&client == "launch") {
+            res = self.client_launch.request(method, &url).body(params).send();
+        } else {
+            res = self.client.request(method, &url).body(params).send();
+        }
         if res.is_ok() {
             let mut res = res.unwrap();
             if res.status().is_success() {
@@ -92,6 +107,13 @@ impl Butler {
         } else {
             Err("Timed out".to_string())
         }
+
+    }
+    fn request(&self, method: Method, path: String, params: String) -> Result<String, String> {
+        self.make_request(method, path, params, "default".to_string())
+    }
+    fn request_l(&self, method: Method, path: String, params: String) -> Result<String, String> {
+        self.make_request(method, path, params, "launch".to_string())
     }
     pub fn fetchall(&self) -> Vec<Cave> {
         let cvs = self.request(
@@ -132,11 +154,18 @@ impl Butler {
         cave
     }
     pub fn launch_game(&self, caveId: String) {
-        self.request(
+        self.request_l(
             Method::Post,
             "/call/Launch".to_string(),
             "{\"caveId\":\"".to_string() + &caveId + "\",\"prereqsDir\":\"" + &self.pre_dir + "\"}",
         ).expect("Couldn't launch game");
+    }
+    pub fn login_api_key(&self, api_key:String) -> Profile {
+        let mut pvs = self.request(Method::Post, "/call/Profile.LoginWithAPIKey".to_string(),"{\"apiKey\":\"".to_string()+&api_key+"\"}").expect("Couldn't login with Api key");
+        println!("{}",pvs);
+        let mut profR :ResponseRes = serde_json::from_str(&pvs).unwrap();
+        let mut profile: Profile = serde_json::from_str(&profR.result["profile"].to_string()).unwrap();
+        profile
     }
 }
 fn get_home() -> String {
