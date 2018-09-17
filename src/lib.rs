@@ -4,6 +4,7 @@ use std::process::Command;
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
+extern crate hyper;
 use std::io::Read;
 use std::env;
 use reqwest::Method;
@@ -237,34 +238,116 @@ impl Butler {
             .collect::<Vec<InstallLocationSummary>>();
         return idirs;
     }
-    pub fn install_queue(&self, game: Game, install_location_id: String, upload: Upload, reason: DownloadReason) -> QueueResponse {
+    pub fn install_queue(
+        &self,
+        game: Game,
+        install_location_id: String,
+        upload: Upload,
+        reason: DownloadReason,
+    ) -> QueueResponse {
         let mut req = InstallQueueReq {
             install_location_id: install_location_id,
             reason: dr_str(reason),
             game: game,
-            upload: upload
+            upload: upload,
         };
         let rstr = serde_json::to_string(&req).unwrap();
-        println!("{}", rstr);
-        let qis = self.request(Method::POST, "/call/Install.Queue".to_string(), rstr).expect("Couldn't queue game for download");
-        println!("{}", qis);
-        let queue_r : ResponseRes = serde_json::from_str(&qis).unwrap();
-        let queue : QueueResponse = serde_json::from_str(&json!(queue_r.result).to_string()).unwrap();
+        let qis = self.request(Method::POST, "/call/Install.Queue".to_string(), rstr)
+            .expect("Couldn't queue game for download");
+        let queue_r: ResponseRes = serde_json::from_str(&qis).unwrap();
+        let queue: QueueResponse = serde_json::from_str(&json!(queue_r.result).to_string())
+            .unwrap();
         return queue;
     }
     pub fn install_perform(&self, queue_id: String, staging_folder: String) {
-        self.request(Method::POST, "/call/Install.Perform".to_string(), "{\"id\":\"+".to_string()+&queue_id+"\",\"stagingFolder\":\""+&staging_folder+"\"}").expect("Couldn't perform install");
+        self.request(
+            Method::POST,
+            "/call/Install.Perform".to_string(),
+            "{\"id\":\"+".to_string() + &queue_id + "\",\"stagingFolder\":\"" + &staging_folder +
+                "\"}",
+        ).expect("Couldn't perform install");
 
     }
     pub fn fetch_uploads(&self, game_id: i32, compatible: bool) -> Vec<Upload> {
-        let uis = self.request(Method::POST, "/call/Fetch.GameUploads".to_string(), "{\"gameId\":".to_string()+&game_id.to_string()+",\"compatible\":true,\"fresh\":true}").expect("Couldn't fetch game uploads");
-        println!("{}", uis);
-        let upload_r : ResponseRes = serde_json::from_str(&uis).unwrap();
-        let uploads = upload_r.result["uploads"].as_array().unwrap().iter().map(|x| {
-            let new : Upload = serde_json::from_str(&x.to_string()).unwrap();
-            new
-        }).collect::<Vec<Upload>>();
+        let uis = self.request(
+            Method::POST,
+            "/call/Fetch.GameUploads".to_string(),
+            "{\"gameId\":".to_string() + &game_id.to_string() +
+                ",\"compatible\":true,\"fresh\":true}",
+        ).expect("Couldn't fetch game uploads");
+        let upload_r: ResponseRes = serde_json::from_str(&uis).unwrap();
+        let uploads = upload_r.result["uploads"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| {
+                let new: Upload = serde_json::from_str(&x.to_string()).unwrap();
+                new
+            })
+            .collect::<Vec<Upload>>();
         uploads
+    }
+    pub fn download_queue(&self, i_queue: QueueResponse) {
+        self.request(
+            Method::POST,
+            "/call/Downloads.Queue".to_string(),
+            "{\"item\":".to_string() + &serde_json::to_string(&i_queue).unwrap() + "}",
+        ).expect("Couldn't queue download");
+    }
+    pub fn downloads_drive(&self, queue_id: String) {
+        let mut hclient = hyper::Client::new();
+        let uri = "http://".to_string()+&self.address+"/call/Downloads.Drive";
+        let mut builder = hyper::Request::builder();
+        builder.method("POST");
+        builder.header("X-Secret", self.secret.as_str());
+        builder.header("X-ID", "0");
+        builder.uri(uri);
+        let mut request= builder.body(hyper::Body::empty()).unwrap();
+        hclient.request(request);
+        let mut done = false;
+        while !done {
+            ::std::thread::sleep_ms(1000);
+            self.clear_completed();
+            let mut ds = self.downloads_list();
+            if ds.is_none() {
+                done = true;
+            }
+        }
+    }
+    pub fn clear_completed(&self){
+       self.request(Method::POST, "/call/Downloads.ClearFinished".to_string(), "{}".to_string()).expect("Couldn't clear completed donwloads"); 
+    }
+    pub fn install_game(&self, game: Game, install_location_id: String, upload: Upload) {
+        let inf = self.install_queue(game, install_location_id, upload, DownloadReason::Install);
+        let id = inf.id.clone();
+        let stf = inf.staging_folder.clone();
+        self.download_queue(inf);
+        self.downloads_drive(id.clone());
+        println!("Downloads drive successfull");
+        self.install_perform(id, stf);
+        println!("Install perform successfull");
+    }
+    pub fn downloads_list(&self) -> Option<Vec<Download>> {
+        let dis = self.request(
+            Method::POST,
+            "/call/Downloads.List".to_string(),
+            "{}".to_string(),
+        ).expect("Couldn't fetch downloads");
+        let down_r: ResponseRes = serde_json::from_str(&dis).unwrap();
+        if down_r.result.contains_key("downloads") && !down_r.result["downloads"].is_null() {
+            let downloads = down_r.result["downloads"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|x| {
+                    let new: Download = serde_json::from_str(&x.to_string()).unwrap();
+                    new
+                })
+                .collect::<Vec<Download>>();
+            Some(downloads)
+        } else {
+            None
+        }
     }
 }
 fn get_home() -> String {
@@ -275,6 +358,6 @@ fn dr_str(r: DownloadReason) -> String {
         DownloadReason::Install => "install",
         DownloadReason::Reinstall => "reinstall",
         DownloadReason::Update => "update",
-        DownloadReason::VersionSwitch => "version-switch"
+        DownloadReason::VersionSwitch => "version-switch",
     }.to_string()
 }

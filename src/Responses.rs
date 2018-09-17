@@ -73,6 +73,34 @@ pub struct Upload {
     pub demo: bool,
     #[serde(flatten)]
     pub dates: Dates,
+    pub platforms: Platforms
+}
+impl Upload {
+    /// Given an OS string, checks if an upload supports it
+    pub fn supports(&self, os: &str) -> bool {
+        match os {
+            "windows" => self.platforms.windows.is_some(),
+            "osx" => self.platforms.osx.is_some(),
+            "linux" => self.platforms.linux.is_some(),
+            _ => false
+        }
+    }
+}
+/// The architectures that an Upload suppports
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub enum Archs {
+    All,
+    #[serde(rename = "386")]
+    i386,
+    Amd64
+}
+/// A struct that holds the platforms an Upload is compatibile with
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Platforms {
+   windows:Option<Archs>,
+   osx:Option<Archs>,
+   linux:Option<Archs>
 }
 ///An itch user's basic public info
 #[derive(Serialize, Deserialize, Debug)]
@@ -175,7 +203,7 @@ pub enum DownloadReason {
     VersionSwitch,
 }
 /// The response from queueing a game to be downloaded
-#[derive(Serialize, Deserialize,Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct QueueResponse {
     pub id: String,
@@ -186,13 +214,30 @@ pub struct QueueResponse {
     pub build: Build,
     pub install_folder: String,
     pub staging_folder: String,
-    pub install_location_id: String
+    pub install_location_id: String,
 }
-#[derive(Serialize, Deserialize,Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct  InstallQueueReq {
-    pub install_location_id:String,
-    pub reason:String,
+pub struct InstallQueueReq {
+    pub install_location_id: String,
+    pub reason: String,
     pub game: Game,
-    pub upload: Upload
+    pub upload: Upload,
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Download {
+    pub id: String,
+    pub error: Option<String>,
+    pub error_message: Option<String>,
+    pub error_code: Option<String>,
+    pub reason: DownloadReason,
+    pub position: i32,
+    pub cave_id: String,
+    pub game: Game,
+    pub upload: Upload,
+    pub build: Option<Build>,
+    pub startedAt: String,
+    pub finishedAt: Option<String>,
+    pub stagingFolder: String,
 }
