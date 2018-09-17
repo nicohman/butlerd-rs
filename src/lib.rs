@@ -57,7 +57,7 @@ impl Butler {
             .expect("Couldn't start butler daemon");
         ::std::thread::sleep_ms(750);
         let mut bd = String::new();
-        fs::File::open("/tmp/butlerdrs.log")
+        fs::File::open(LOG_PATH)
             .unwrap()
             .read_to_string(&mut bd)
             .unwrap();
@@ -220,6 +220,7 @@ impl Butler {
             return None;
         }
     }
+    /// Gets all configured butler install locations in a vec
     pub fn get_install_locations(&self) -> Vec<InstallLocationSummary> {
         let ils = self.request(
             Method::POST,
@@ -238,6 +239,7 @@ impl Butler {
             .collect::<Vec<InstallLocationSummary>>();
         return idirs;
     }
+    /// Queues up a game installation
     pub fn install_queue(
         &self,
         game: Game,
@@ -259,6 +261,7 @@ impl Butler {
             .unwrap();
         return queue;
     }
+    /// Performs an Install. Download must be completed beforehand
     pub fn install_perform(&self, queue_id: String, staging_folder: String) {
         self.request(
             Method::POST,
@@ -268,6 +271,7 @@ impl Butler {
         ).expect("Couldn't perform install");
 
     }
+    /// Fetches all uploads for a game
     pub fn fetch_uploads(&self, game_id: i32, compatible: bool) -> Vec<Upload> {
         let uis = self.request(
             Method::POST,
@@ -287,6 +291,7 @@ impl Butler {
             .collect::<Vec<Upload>>();
         uploads
     }
+    /// Queues a download to later be downloaded by downloads_drive
     pub fn download_queue(&self, i_queue: QueueResponse) {
         self.request(
             Method::POST,
@@ -294,15 +299,16 @@ impl Butler {
             "{\"item\":".to_string() + &serde_json::to_string(&i_queue).unwrap() + "}",
         ).expect("Couldn't queue download");
     }
+    /// Downloads all games in the queue. Completes when they are all done
     pub fn downloads_drive(&self, queue_id: String) {
         let mut hclient = hyper::Client::new();
-        let uri = "http://".to_string()+&self.address+"/call/Downloads.Drive";
+        let uri = "http://".to_string() + &self.address + "/call/Downloads.Drive";
         let mut builder = hyper::Request::builder();
         builder.method("POST");
         builder.header("X-Secret", self.secret.as_str());
         builder.header("X-ID", "0");
         builder.uri(uri);
-        let mut request= builder.body(hyper::Body::empty()).unwrap();
+        let mut request = builder.body(hyper::Body::empty()).unwrap();
         hclient.request(request);
         let mut done = false;
         while !done {
@@ -314,9 +320,16 @@ impl Butler {
             }
         }
     }
-    pub fn clear_completed(&self){
-       self.request(Method::POST, "/call/Downloads.ClearFinished".to_string(), "{}".to_string()).expect("Couldn't clear completed donwloads"); 
+    /// Clears all completed downloads from the queue
+    pub fn clear_completed(&self) {
+        self.request(
+            Method::POST,
+            "/call/Downloads.ClearFinished".to_string(),
+            "{}".to_string(),
+        ).expect("Couldn't clear completed donwloads");
     }
+    /// A helper function that performs all of the game installation/download steps for you.
+    /// Recommended over doing installation yourself.
     pub fn install_game(&self, game: Game, install_location_id: String, upload: Upload) {
         let inf = self.install_queue(game, install_location_id, upload, DownloadReason::Install);
         let id = inf.id.clone();
@@ -327,6 +340,7 @@ impl Butler {
         self.install_perform(id, stf);
         println!("Install perform successfull");
     }
+    /// Fetches a vec of Downloads from the queue, returning None if none are available
     pub fn downloads_list(&self) -> Option<Vec<Download>> {
         let dis = self.request(
             Method::POST,
@@ -353,6 +367,7 @@ impl Butler {
 fn get_home() -> String {
     return String::from(env::home_dir().unwrap().to_str().unwrap());
 }
+/// Translates a DownloadReason into a string to be used by the butler API
 fn dr_str(r: DownloadReason) -> String {
     match r {
         DownloadReason::Install => "install",

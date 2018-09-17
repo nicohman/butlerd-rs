@@ -7,7 +7,7 @@ static OS_STR: &str = "macos";
 #[cfg(target_os = "linux")]
 static OS_STR: &str = "linux";
 #[cfg(target_os = "windows")]
-static OS_STR : &str = "windows";
+static OS_STR: &str = "windows";
 thread_local!(static b : Butler = Butler::new());
 #[test]
 fn fetchall() {
@@ -69,13 +69,12 @@ fn get_install_locations() {
 #[ignore]
 fn install() {
     let but = Butler::new();
- //   b.with(|but| {
-        let game = but.fetch_game(283483);
-        let install_id = &but.get_install_locations()[0];
-        let mut uploads = but.fetch_uploads(283483, true);
-        uploads = uploads.into_iter().filter(|x| {
-            x.supports(OS_STR)
-        }).collect::<Vec<Upload>>();
-        but.install_game(game, install_id.id.to_string(), uploads.pop().unwrap());
- //   });
+    let game = but.fetch_game(283483);
+    let install_id = &but.get_install_locations()[0];
+    let mut uploads = but.fetch_uploads(283483, true);
+    uploads = uploads
+        .into_iter()
+        .filter(|x| x.supports(OS_STR))
+        .collect::<Vec<Upload>>();
+    but.install_game(game, install_id.id.to_string(), uploads.pop().unwrap());
 }
