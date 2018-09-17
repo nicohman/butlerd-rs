@@ -54,7 +54,7 @@ impl Butler {
             )
             .spawn()
             .expect("Couldn't start butler daemon");
-        ::std::thread::sleep_ms(500);
+        ::std::thread::sleep_ms(750);
         let mut bd = String::new();
         fs::File::open("/tmp/butlerdrs.log")
             .unwrap()
@@ -251,6 +251,10 @@ impl Butler {
         let queue_r : ResponseRes = serde_json::from_str(&qis).unwrap();
         let queue : QueueResponse = serde_json::from_str(&json!(queue_r.result).to_string()).unwrap();
         return queue;
+    }
+    pub fn install_perform(&self, queue_id: String, staging_folder: String) {
+        self.request(Method::POST, "/call/Install.Perform".to_string(), "{\"id\":\"+".to_string()+&queue_id+"\",\"stagingFolder\":\""+&staging_folder+"\"}").expect("Couldn't perform install");
+
     }
     pub fn fetch_uploads(&self, game_id: i32, compatible: bool) -> Vec<Upload> {
         let uis = self.request(Method::POST, "/call/Fetch.GameUploads".to_string(), "{\"gameId\":".to_string()+&game_id.to_string()+",\"compatible\":true,\"fresh\":true}").expect("Couldn't fetch game uploads");

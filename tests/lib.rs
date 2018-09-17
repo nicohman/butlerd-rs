@@ -65,6 +65,7 @@ fn reinstall() {
         let game = but.fetch_game(283483);
         let install_id = &but.get_install_locations()[0];
         let upload = but.fetch_uploads(283483, true).pop().unwrap();
-        but.install_queue(game, install_id.id.to_string(), upload, butlerd::Responses::DownloadReason::Reinstall);
+        let inf = but.install_queue(game, install_id.id.to_string(), upload, butlerd::Responses::DownloadReason::Reinstall);
+        but.install_perform(inf.id, inf.staging_folder);
     });
 }
