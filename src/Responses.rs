@@ -101,7 +101,7 @@ pub struct Build {
     //  Todo
     //  pub files: BuildFiles[]
     /// The user that published the Build
-    pub user: User,
+    pub user: Option<User>,
     #[serde(flatten)]
     pub dates: Dates,
 }
@@ -161,4 +161,38 @@ pub struct InstallLocationSizeInfo {
     pub freeSize: i64,
     /// Negative if unknown
     pub totalSize: i64,
+}
+/// Reason to download a game
+#[derive(Serialize, Deserialize, Debug)]
+pub enum DownloadReason {
+    #[serde(rename = "install")]
+    Install,
+    #[serde(rename = "reinstall")]
+    Reinstall,
+    #[serde(rename = "update")]
+    Update,
+    #[serde(rename = "version-switch")]
+    VersionSwitch,
+}
+/// The response from queueing a game to be downloaded
+#[derive(Serialize, Deserialize,Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct QueueResponse {
+    pub id: String,
+    pub reason: DownloadReason,
+    pub cave_id: String,
+    pub game: Game,
+    pub upload: Upload,
+    pub build: Build,
+    pub install_folder: String,
+    pub staging_folder: String,
+    pub install_location_id: String
+}
+#[derive(Serialize, Deserialize,Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct  InstallQueueReq {
+    pub install_location_id:String,
+    pub reason:String,
+    pub game: Game,
+    pub upload: Upload
 }

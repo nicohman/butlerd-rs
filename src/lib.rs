@@ -2,11 +2,13 @@ extern crate reqwest;
 use std::process::Command;
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
 extern crate serde_json;
 use std::io::Read;
 use std::env;
 use reqwest::Method;
 pub mod Responses;
+use std::collections::HashMap;
 use std::fs;
 use Responses::*;
 #[cfg(target_os = "macos")]
@@ -235,7 +237,40 @@ impl Butler {
             .collect::<Vec<InstallLocationSummary>>();
         return idirs;
     }
+    pub fn install_queue(&self, game: Game, install_location_id: String, upload: Upload, reason: DownloadReason) -> QueueResponse {
+        let mut req = InstallQueueReq {
+            install_location_id: install_location_id,
+            reason: dr_str(reason),
+            game: game,
+            upload: upload
+        };
+        let rstr = serde_json::to_string(&req).unwrap();
+        println!("{}", rstr);
+        let qis = self.request(Method::POST, "/call/Install.Queue".to_string(), rstr).expect("Couldn't queue game for download");
+        println!("{}", qis);
+        let queue_r : ResponseRes = serde_json::from_str(&qis).unwrap();
+        let queue : QueueResponse = serde_json::from_str(&json!(queue_r.result).to_string()).unwrap();
+        return queue;
+    }
+    pub fn fetch_uploads(&self, game_id: i32, compatible: bool) -> Vec<Upload> {
+        let uis = self.request(Method::POST, "/call/Fetch.GameUploads".to_string(), "{\"gameId\":".to_string()+&game_id.to_string()+",\"compatible\":true,\"fresh\":true}").expect("Couldn't fetch game uploads");
+        println!("{}", uis);
+        let upload_r : ResponseRes = serde_json::from_str(&uis).unwrap();
+        let uploads = upload_r.result["uploads"].as_array().unwrap().iter().map(|x| {
+            let new : Upload = serde_json::from_str(&x.to_string()).unwrap();
+            new
+        }).collect::<Vec<Upload>>();
+        uploads
+    }
 }
 fn get_home() -> String {
     return String::from(env::home_dir().unwrap().to_str().unwrap());
+}
+fn dr_str(r: DownloadReason) -> String {
+    match r {
+        DownloadReason::Install => "install",
+        DownloadReason::Reinstall => "reinstall",
+        DownloadReason::Update => "update",
+        DownloadReason::VersionSwitch => "version-switch"
+    }.to_string()
 }
