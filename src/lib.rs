@@ -363,6 +363,10 @@ impl Butler {
             None
         }
     }
+    /// Uninstalls a cave
+    pub fn uninstall(&self, cave_id:String) {
+        self.request(Method::POST, "/call/Uninstall.Perform".to_string(), "{\"caveId\":\"".to_string()+&cave_id+"\"}").expect("Couldn't uninstall cave");
+    }
 }
 fn get_home() -> String {
     return String::from(env::home_dir().unwrap().to_str().unwrap());
