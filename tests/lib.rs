@@ -66,6 +66,15 @@ fn get_install_locations() {
     });
 }
 #[test]
+fn fetch_uploads() {
+    b.with(|but| {
+        let uploads = but.fetch_uploads(283483, true);
+        println!("{:?}", uploads);
+        assert!(uploads.len() > 0);
+    });
+
+}
+#[test]
 #[ignore]
 fn install() {
     let but = Butler::new();

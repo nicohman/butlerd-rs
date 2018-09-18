@@ -5,6 +5,8 @@ extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
 extern crate hyper;
+extern crate serde;
+use serde::de::DeserializeOwned;
 use std::io::Read;
 use std::env;
 use reqwest::Method;
@@ -279,7 +281,8 @@ impl Butler {
             "{\"gameId\":".to_string() + &game_id.to_string() +
                 ",\"compatible\":true,\"fresh\":true}",
         ).expect("Couldn't fetch game uploads");
-        let upload_r: ResponseRes = serde_json::from_str(&uis).unwrap();
+        let uploads : FetchUploads = self.pres(uis).unwrap();
+       /* let upload_r: ResponseRes = serde_json::from_str(&uis).unwrap();
         let uploads = upload_r.result["uploads"]
             .as_array()
             .unwrap()
@@ -288,8 +291,8 @@ impl Butler {
                 let new: Upload = serde_json::from_str(&x.to_string()).unwrap();
                 new
             })
-            .collect::<Vec<Upload>>();
-        uploads
+            .collect::<Vec<Upload>>();*/
+        uploads.uploads
     }
     /// Queues a download to later be downloaded by downloads_drive
     pub fn download_queue(&self, i_queue: QueueResponse) {
@@ -366,6 +369,10 @@ impl Butler {
     /// Uninstalls a cave
     pub fn uninstall(&self, cave_id:String) {
         self.request(Method::POST, "/call/Uninstall.Perform".to_string(), "{\"caveId\":\"".to_string()+&cave_id+"\"}").expect("Couldn't uninstall cave");
+    }
+    pub fn pres<T>(&self, st: String) -> Option<T> where T:DeserializeOwned {
+        let res : ResponseRes =  serde_json::from_str(&st).unwrap();
+        return Some(serde_json::from_str(&serde_json::to_string(&res.result).unwrap()).unwrap());
     }
 }
 fn get_home() -> String {
