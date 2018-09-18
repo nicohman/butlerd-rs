@@ -11,9 +11,11 @@ use std::io::Read;
 use std::env;
 use reqwest::Method;
 pub mod Responses;
+mod Packaged;
 use std::collections::HashMap;
 use std::fs;
 use Responses::*;
+use Packaged::*;
 #[cfg(target_os = "macos")]
 static DB_PATH: &str = "";
 #[cfg(target_os = "linux")]
@@ -133,17 +135,8 @@ impl Butler {
             "/call/Fetch.Caves".to_string(),
             "{}".to_string(),
         ).unwrap();
-        let caves_r: ResponseRes = serde_json::from_str(&cvs).unwrap();
-        let caves = caves_r.result["items"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|x| {
-                let new: Cave = serde_json::from_str(&x.to_string()).unwrap();
-                return new;
-            })
-            .collect::<Vec<Cave>>();
-        caves
+        let caves: FetchCaves = pres(cvs).unwrap();
+        caves.items
     }
     ///Fetches specific game by id
     pub fn fetch_game(&self, game_id: i32) -> Game {
@@ -152,9 +145,8 @@ impl Butler {
             "/call/Fetch.Game".to_string(),
             "{\"gameId\":".to_string() + &game_id.to_string() + "}",
         ).unwrap();
-        let game_r: ResponseRes = serde_json::from_str(&gvs).unwrap();
-        let game: Game = serde_json::from_str(&game_r.result["game"].to_string()).unwrap();
-        game
+        let game: FetchGame = pres(gvs).unwrap();
+        game.game
     }
     ///Fetches specific cave by id
     pub fn fetch_cave(&self, cave_id: String) -> Cave {
@@ -163,9 +155,8 @@ impl Butler {
             "/call/Fetch.Cave".to_string(),
             "{\"caveId\":\"".to_string() + &cave_id + "\"}",
         ).expect("Couldn't fetch cave");
-        let cave_r: ResponseRes = serde_json::from_str(&cvs).unwrap();
-        let cave: Cave = serde_json::from_str(&cave_r.result["cave"].to_string()).unwrap();
-        cave
+        let cave: FetchCave = pres(cvs).unwrap();
+        cave.cave
     }
     /// Launches game by CaveID. Note that this will not complete until the game is closed.
     pub fn launch_game(&self, cave_id: String) {
@@ -184,9 +175,8 @@ impl Butler {
             "{\"apiKey\":\"".to_string() + &api_key + "\"}",
         ).expect("Couldn't login with Api key");
         println!("{}", pvs);
-        let prof_r: ResponseRes = serde_json::from_str(&pvs).unwrap();
-        let profile: Profile = serde_json::from_str(&prof_r.result["profile"].to_string()).unwrap();
-        profile
+        let profile: FetchProfile = pres(pvs).unwrap();
+        profile.profile
     }
     /// Fetches a vec of games owned by a specific profile id
     pub fn fetch_profile_games(&self, profile_id: i32) -> Vec<ProfileGame> {
@@ -195,17 +185,8 @@ impl Butler {
             "/call/Fetch.ProfileGames".to_string(),
             "{\"profileId\":\"".to_string() + &profile_id.to_string() + "\"}",
         ).expect("Couldn't fetch profile games");
-        let prof_r: ResponseRes = serde_json::from_str(&pvs).unwrap();
-        let games = prof_r.result["items"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|x| {
-                let new: ProfileGame = serde_json::from_str(&x.to_string()).unwrap();
-                return new;
-            })
-            .collect::<Vec<ProfileGame>>();
-        games
+        let games: FetchPGames = pres(pvs).unwrap();
+        games.items
     }
     /// Fetches the best available sale for a game(if such a sale exists)
     pub fn fetch_sale(&self, game_id: i32) -> Option<Sale> {
@@ -214,13 +195,8 @@ impl Butler {
             "/call/Fetch.Sale".to_string(),
             "{\"gameId\":".to_string() + &game_id.to_string() + "}",
         ).expect("Couldn't fetch sale");
-        let sale_r: ResponseRes = serde_json::from_str(&sls).unwrap();
-        if sale_r.result.contains_key("sale") && !sale_r.result["sale"].is_null() {
-            let sale: Sale = serde_json::from_str(&sale_r.result["sale"].to_string()).unwrap();
-            return Some(sale);
-        } else {
-            return None;
-        }
+        let sale: FetchSale = pres(sls).unwrap();
+        sale.sale
     }
     /// Gets all configured butler install locations in a vec
     pub fn get_install_locations(&self) -> Vec<InstallLocationSummary> {
@@ -229,17 +205,8 @@ impl Butler {
             "/call/Install.Locations.List".to_string(),
             "{}".to_string(),
         ).expect("Couldn't get install locations");
-        let install_r: ResponseRes = serde_json::from_str(&ils).unwrap();
-        let idirs = install_r.result["installLocations"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|x| {
-                let new: InstallLocationSummary = serde_json::from_str(&x.to_string()).unwrap();
-                new
-            })
-            .collect::<Vec<InstallLocationSummary>>();
-        return idirs;
+        let idirs: FetchIDirs = pres(ils).unwrap();
+        idirs.installLocations
     }
     /// Queues up a game installation
     pub fn install_queue(
@@ -258,9 +225,7 @@ impl Butler {
         let rstr = serde_json::to_string(&req).unwrap();
         let qis = self.request(Method::POST, "/call/Install.Queue".to_string(), rstr)
             .expect("Couldn't queue game for download");
-        let queue_r: ResponseRes = serde_json::from_str(&qis).unwrap();
-        let queue: QueueResponse = serde_json::from_str(&json!(queue_r.result).to_string())
-            .unwrap();
+        let queue: QueueResponse = pres(qis).unwrap();
         return queue;
     }
     /// Performs an Install. Download must be completed beforehand
@@ -281,17 +246,7 @@ impl Butler {
             "{\"gameId\":".to_string() + &game_id.to_string() +
                 ",\"compatible\":true,\"fresh\":true}",
         ).expect("Couldn't fetch game uploads");
-        let uploads : FetchUploads = self.pres(uis).unwrap();
-       /* let upload_r: ResponseRes = serde_json::from_str(&uis).unwrap();
-        let uploads = upload_r.result["uploads"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|x| {
-                let new: Upload = serde_json::from_str(&x.to_string()).unwrap();
-                new
-            })
-            .collect::<Vec<Upload>>();*/
+        let uploads: FetchUploads = pres(uis).unwrap();
         uploads.uploads
     }
     /// Queues a download to later be downloaded by downloads_drive
@@ -350,29 +305,16 @@ impl Butler {
             "/call/Downloads.List".to_string(),
             "{}".to_string(),
         ).expect("Couldn't fetch downloads");
-        let down_r: ResponseRes = serde_json::from_str(&dis).unwrap();
-        if down_r.result.contains_key("downloads") && !down_r.result["downloads"].is_null() {
-            let downloads = down_r.result["downloads"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|x| {
-                    let new: Download = serde_json::from_str(&x.to_string()).unwrap();
-                    new
-                })
-                .collect::<Vec<Download>>();
-            Some(downloads)
-        } else {
-            None
-        }
+        let down : DownList = pres(dis).unwrap();
+        down.downloads
     }
     /// Uninstalls a cave
-    pub fn uninstall(&self, cave_id:String) {
-        self.request(Method::POST, "/call/Uninstall.Perform".to_string(), "{\"caveId\":\"".to_string()+&cave_id+"\"}").expect("Couldn't uninstall cave");
-    }
-    pub fn pres<T>(&self, st: String) -> Option<T> where T:DeserializeOwned {
-        let res : ResponseRes =  serde_json::from_str(&st).unwrap();
-        return Some(serde_json::from_str(&serde_json::to_string(&res.result).unwrap()).unwrap());
+    pub fn uninstall(&self, cave_id: String) {
+        self.request(
+            Method::POST,
+            "/call/Uninstall.Perform".to_string(),
+            "{\"caveId\":\"".to_string() + &cave_id + "\"}",
+        ).expect("Couldn't uninstall cave");
     }
 }
 fn get_home() -> String {
@@ -386,4 +328,14 @@ fn dr_str(r: DownloadReason) -> String {
         DownloadReason::Update => "update",
         DownloadReason::VersionSwitch => "version-switch",
     }.to_string()
+}
+/// A helper function to interpet a common result response from butler. Took far too long to write.
+fn pres<T>(st: String) -> Option<T>
+where
+    T: DeserializeOwned,
+{
+    let res: ResponseRes = serde_json::from_str(&st).unwrap();
+    return Some(
+        serde_json::from_str(&serde_json::to_string(&res.result).unwrap()).unwrap(),
+    );
 }

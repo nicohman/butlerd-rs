@@ -37,10 +37,7 @@ pub struct Game {
     pub purchasesCount: Option<i32>,
     pub published: Option<bool>,
 }
-#[derive(Serialize, Deserialize, Debug)]
-pub struct FetchUploads {
-    pub uploads: Vec<Upload>
-}
+
 /// A Game that the logged-in user's profile owns
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProfileGame {
@@ -248,3 +245,4 @@ pub struct Download {
     pub finishedAt: Option<String>,
     pub stagingFolder: String,
 }
+
