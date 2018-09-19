@@ -178,6 +178,12 @@ impl Butler {
         let profile: FetchProfile = pres(pvs).unwrap();
         profile.profile
     }
+    /// Given an username and password, logs into a profile and returns profile and cookie.
+    pub fn login_password(&self, username:String, password:String) -> PassLogRes {
+        let lss = self.request(Method::POST, "/call/Profile.LoginWithPassword".to_string(), "{\"username:\":\"".to_string()+&username+"\",\"password\":\""+&password+"\"}").expect("Couldn't login with password");
+        let profile: PassLogRes = pres(lss).unwrap();
+        profile
+    }
     /// Fetches a vec of games owned by a specific profile id
     pub fn fetch_profile_games(&self, profile_id: i32) -> Vec<ProfileGame> {
         let pvs = self.request(
