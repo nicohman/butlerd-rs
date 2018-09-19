@@ -284,6 +284,11 @@ impl Butler {
             }
         }
     }
+    ///Gets butler version strings
+    pub fn get_version(&self) -> VersionInfo {
+        let version: VersionInfo = self.res_req("/call/Version.Get", vec![]).expect("Couldn't get version");
+        version
+    }
     /// Clears all completed downloads from the queue
     pub fn clear_completed(&self) {
         self.request(
@@ -322,6 +327,11 @@ impl Butler {
             "{\"caveId\":\"".to_string() + &cave_id + "\"}",
         ).expect("Couldn't uninstall cave");
     }
+    fn res_req<T> (&self, url:&str, body: Vec<(&str, &str)> ) -> Option<T> where T: DeserializeOwned {
+        let ris = self.request(Method::POST, url.to_string(), serde_json::to_string(&json!(mp(body)).to_string()).unwrap()).unwrap();
+        let res = pres(ris);
+        res
+    }
 }
 fn get_home() -> String {
     return String::from(env::home_dir().unwrap().to_str().unwrap());
@@ -344,4 +354,8 @@ where
     return Some(
         serde_json::from_str(&serde_json::to_string(&res.result).unwrap()).unwrap(),
     );
+}
+/// A helper function to create a map easily for use with res_req
+fn mp ( data: Vec<(&str, &str)>) -> HashMap<String, String> {
+    data.into_iter().map(|x| (x.0.to_string(), x.1.to_string())).collect::<HashMap<String, _>>()
 }
