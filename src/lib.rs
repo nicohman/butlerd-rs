@@ -130,12 +130,7 @@ impl Butler {
     }
     /// Fetchs all installed caves
     pub fn fetchall(&self) -> Vec<Cave> {
-        let cvs = self.request(
-            Method::POST,
-            "/call/Fetch.Caves".to_string(),
-            "{}".to_string(),
-        ).unwrap();
-        let caves: FetchCaves = pres(cvs).unwrap();
+        let caves: FetchCaves = self.res_req("/call/Fetch.Caves", vec![]).unwrap();
         caves.items
     }
     ///Fetches specific game by id
@@ -150,12 +145,8 @@ impl Butler {
     }
     ///Fetches specific cave by id
     pub fn fetch_cave(&self, cave_id: String) -> Cave {
-        let cvs = self.request(
-            Method::POST,
-            "/call/Fetch.Cave".to_string(),
-            "{\"caveId\":\"".to_string() + &cave_id + "\"}",
-        ).expect("Couldn't fetch cave");
-        let cave: FetchCave = pres(cvs).unwrap();
+        let cave: FetchCave = self.res_req("/call/Fetch.Cave", vec![("caveId", &cave_id)])
+            .unwrap();
         cave.cave
     }
     /// Launches game by CaveID. Note that this will not complete until the game is closed.
@@ -169,19 +160,17 @@ impl Butler {
     }
     /// Given an API key, logs into a profile and returns profile.
     pub fn login_api_key(&self, api_key: String) -> Profile {
-        let pvs = self.request(
-            Method::POST,
-            "/call/Profile.LoginWithAPIKey".to_string(),
-            "{\"apiKey\":\"".to_string() + &api_key + "\"}",
-        ).expect("Couldn't login with Api key");
-        println!("{}", pvs);
-        let profile: FetchProfile = pres(pvs).unwrap();
+        let profile: FetchProfile =
+            self.res_req("/call/Profile.LoginWithAPIKey", vec![("apiKey", &api_key)])
+                .unwrap();
         profile.profile
     }
     /// Given an username and password, logs into a profile and returns profile and cookie.
-    pub fn login_password(&self, username:String, password:String) -> PassLogRes {
-        let lss = self.request(Method::POST, "/call/Profile.LoginWithPassword".to_string(), "{\"username:\":\"".to_string()+&username+"\",\"password\":\""+&password+"\"}").expect("Couldn't login with password");
-        let profile: PassLogRes = pres(lss).unwrap();
+    pub fn login_password(&self, username: String, password: String) -> PassLogRes {
+        let profile: PassLogRes = self.res_req(
+            "/call/Profile.LoginWithPassword",
+            vec![("username", &username), ("password", &password)],
+        ).unwrap();
         profile
     }
     /// Fetches a vec of games owned by a specific profile id
@@ -206,12 +195,8 @@ impl Butler {
     }
     /// Gets all configured butler install locations in a vec
     pub fn get_install_locations(&self) -> Vec<InstallLocationSummary> {
-        let ils = self.request(
-            Method::POST,
-            "/call/Install.Locations.List".to_string(),
-            "{}".to_string(),
-        ).expect("Couldn't get install locations");
-        let idirs: FetchIDirs = pres(ils).unwrap();
+        let idirs: FetchIDirs = self.res_req("/call/Install.Locations.List", vec![])
+            .unwrap();
         idirs.installLocations
     }
     /// Queues up a game installation
@@ -284,9 +269,11 @@ impl Butler {
             }
         }
     }
-    ///Gets butler version strings
+    /// Gets butler version strings
     pub fn get_version(&self) -> VersionInfo {
-        let version: VersionInfo = self.res_req("/call/Version.Get", vec![]).expect("Couldn't get version");
+        let version: VersionInfo = self.res_req("/call/Version.Get", vec![]).expect(
+            "Couldn't get version",
+        );
         version
     }
     /// Clears all completed downloads from the queue
@@ -305,18 +292,13 @@ impl Butler {
         let stf = inf.staging_folder.clone();
         self.download_queue(inf);
         self.downloads_drive(id.clone());
-        println!("Downloads drive successfull");
+        println!("Downloads drive successful");
         self.install_perform(id, stf);
-        println!("Install perform successfull");
+        println!("Install perform successful");
     }
     /// Fetches a vec of Downloads from the queue, returning None if none are available
     pub fn downloads_list(&self) -> Option<Vec<Download>> {
-        let dis = self.request(
-            Method::POST,
-            "/call/Downloads.List".to_string(),
-            "{}".to_string(),
-        ).expect("Couldn't fetch downloads");
-        let down : DownList = pres(dis).unwrap();
+        let down: DownList = self.res_req("/call/Downloads.List", vec![]).unwrap();
         down.downloads
     }
     /// Uninstalls a cave
@@ -327,12 +309,15 @@ impl Butler {
             "{\"caveId\":\"".to_string() + &cave_id + "\"}",
         ).expect("Couldn't uninstall cave");
     }
-    fn res_req<T> (&self, url:&str, body: Vec<(&str, &str)> ) -> Option<T> where T: DeserializeOwned {
+    fn res_req<T>(&self, url: &str, body: Vec<(&str, &str)>) -> Option<T>
+    where
+        T: DeserializeOwned,
+    {
         let mut b = String::new();
         if body.len() < 1 {
             b = "{}".to_string();
         } else {
-            b =serde_json::to_string(&json!(mp(body)).to_string()).unwrap();
+            b = serde_json::to_string(&mp(body)).unwrap();
         }
         let ris = self.request(Method::POST, url.to_string(), b).unwrap();
         let res = pres(ris);
@@ -362,6 +347,8 @@ where
     );
 }
 /// A helper function to create a map easily for use with res_req
-fn mp ( data: Vec<(&str, &str)>) -> HashMap<String, String> {
-    data.into_iter().map(|x| (x.0.to_string(), x.1.to_string())).collect::<HashMap<String, _>>()
+fn mp(data: Vec<(&str, &str)>) -> HashMap<String, String> {
+    data.into_iter()
+        .map(|x| (x.0.to_string(), x.1.to_string()))
+        .collect::<HashMap<String, _>>()
 }

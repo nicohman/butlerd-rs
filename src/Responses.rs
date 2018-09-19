@@ -248,7 +248,7 @@ pub struct Download {
 /// Butler daemon version info
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VersionInfo {
-    pub version:String,
+    pub version: String,
     /// More verbose version
-    pub versionString: String
+    pub versionString: String,
 }

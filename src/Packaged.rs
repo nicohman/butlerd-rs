@@ -45,5 +45,5 @@ pub struct DownList {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PassLogRes {
     pub profile: Profile,
-    pub cookie: Map<String, Value>
+    pub cookie: Map<String, Value>,
 }
