@@ -47,3 +47,7 @@ pub struct PassLogRes {
     pub profile: Profile,
     pub cookie: Map<String, Value>,
 }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GamesSearchRes {
+    pub games: Option<Vec<Game>>
+}

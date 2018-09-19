@@ -59,6 +59,7 @@ impl Butler {
             )
             .spawn()
             .expect("Couldn't start butler daemon");
+        //TODO: REPLACE
         ::std::thread::sleep_ms(750);
         let mut bd = String::new();
         fs::File::open(LOG_PATH)
@@ -300,6 +301,15 @@ impl Butler {
     pub fn downloads_list(&self) -> Option<Vec<Download>> {
         let down: DownList = self.res_req("/call/Downloads.List", vec![]).unwrap();
         down.downloads
+    }
+    /// Searches games for string. Requires profileid.
+    pub fn search_games(&self, profile_id: i32, query:String) -> Option<Vec<Game>> {
+        let gis = self.request(Method::POST, "/call/Seach.Games".to_string(), json!({
+            "profileId":profile_id,
+            "query":query
+        }).to_string()).unwrap(); 
+        let games : GamesSearchRes = pres(gis).unwrap();
+        return games.games;
     }
     /// Uninstalls a cave
     pub fn uninstall(&self, cave_id: String) {
