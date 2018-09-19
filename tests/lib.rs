@@ -75,6 +75,13 @@ fn fetch_uploads() {
 
 }
 #[test]
+fn fetch_version() {
+    b.with(|but| {
+        let v = but.get_version();
+        println!("{:?}", v);
+    });
+}
+#[test]
 #[ignore]
 fn install() {
     let but = Butler::new();

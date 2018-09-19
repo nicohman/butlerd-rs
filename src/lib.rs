@@ -328,7 +328,13 @@ impl Butler {
         ).expect("Couldn't uninstall cave");
     }
     fn res_req<T> (&self, url:&str, body: Vec<(&str, &str)> ) -> Option<T> where T: DeserializeOwned {
-        let ris = self.request(Method::POST, url.to_string(), serde_json::to_string(&json!(mp(body)).to_string()).unwrap()).unwrap();
+        let mut b = String::new();
+        if body.len() < 1 {
+            b = "{}".to_string();
+        } else {
+            b =serde_json::to_string(&json!(mp(body)).to_string()).unwrap();
+        }
+        let ris = self.request(Method::POST, url.to_string(), b).unwrap();
         let res = pres(ris);
         res
     }
