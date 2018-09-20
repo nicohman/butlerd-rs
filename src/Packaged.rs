@@ -58,3 +58,7 @@ pub struct Success {
 pub struct FetchProfiles {
     pub profiles: Vec<Profile>,
 }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ProfileKeys {
+    pub items: Vec<DownloadKey>
+}

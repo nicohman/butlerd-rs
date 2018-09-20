@@ -256,7 +256,7 @@ pub struct VersionInfo {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CheckUpdate {
     pub updates: Vec<GameUpdate>,
-    pub warnings: Vec<String>
+    pub warnings: Vec<String>,
 }
 /// Information on an avavilable update for a game
 #[derive(Serialize, Deserialize, Debug)]
@@ -265,18 +265,29 @@ pub struct GameUpdate {
     pub game: Game,
     /// Whether or not this is a direct update within the same channel. See [here](http://docs.itch.ovh/butlerd/master/#/?id=gameupdate)
     pub direct: bool,
-    pub choices: Option<Vec<GameUpdateChoice>>
+    pub choices: Option<Vec<GameUpdateChoice>>,
 }
-/// A choice of a possible update for a game. Higher confidence is usually better. 
+/// A choice of a possible update for a game. Higher confidence is usually better.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GameUpdateChoice {
     pub upload: Upload,
     pub build: Option<Build>,
     /// How confident butler is that this is the `right` update
-    pub confidence: f64
+    pub confidence: f64,
 }
+/// Butler's response when you login using an username and password
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PassLogRes {
     pub profile: Profile,
     pub cookie: Map<String, Value>,
+}
+/// Representation of a download key for a purchased non-free game
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DownloadKey {
+    pub id: i64,
+    pub gameId: i64,
+    pub game: Game,
+    pub ownerId: i64,
+    #[serde(flatten)]
+    pub dates: Dates,
 }

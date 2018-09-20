@@ -101,3 +101,13 @@ fn profile_list () {
         println!("{:?}", profiles);
     });
 }
+#[test]
+fn test_login_fetch_keys () {
+    b.with(|but| {
+        let username = env::var_os("ITCH_USERNAME");
+        let password = env::var_os("ITCH_PASSWORD");
+        let profile = but.login_password(username, password);
+        let keys = fetch_profile_keys(profile.id, true);
+        println!("{:?}", keys);
+    });
+}

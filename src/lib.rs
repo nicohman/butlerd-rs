@@ -167,16 +167,21 @@ impl Butler {
     }
     /// Lists saved profiles
     pub fn profile_list(&self) -> Vec<Profile> {
-        let profiles : FetchProfiles = self.res_req("/call/Profile.List", vec![]).expect("Couldn't list saved profiles");
+        let profiles: FetchProfiles = self
+            .res_req("/call/Profile.List", vec![])
+            .expect("Couldn't list saved profiles");
         profiles.profiles
     }
     /// Removes a profile's saved info. Also removes it from profile_list. Returns true if
     /// successful.
     pub fn profile_forget(&self, profileId: i32) -> bool {
-        let sis = self.request(POST, "/call/Profile.Forget", json!({
-            "profileId": profileId
-        }).to_string()).expect("Couldn't forget profile");
-        let suc : Success = pres(sis).unwrap();
+        let sis =
+            self.request(
+                POST,
+                "/call/Profile.Forget",
+                json!({ "profileId": profileId }).to_string(),
+            ).expect("Couldn't forget profile");
+        let suc: Success = pres(sis).unwrap();
         suc.success
     }
     /// Logs into a profile using saved credentials
@@ -218,6 +223,21 @@ impl Butler {
             ).expect("Couldn't fetch profile games");
         let games: FetchPGames = pres(pvs).unwrap();
         games.items
+    }
+    /// Fetches owned download keys for a profile. Pass fresh as true to force butler to refresh
+    /// cache
+    pub fn fetch_profile_keys(&self, profile_id: i32, fresh: bool) -> Vec<DownloadKey> {
+        let dis =
+            self.request(
+                POST,
+                "/call/Fetch.ProfileOwnedKeys",
+                json!({
+            "profileId": profile_id,
+            "fresh":fresh
+        }).to_string(),
+            ).expect("Couldn't fetch profile keys");
+        let keys: ProfileKeys = pres(dis).unwrap();
+        keys.items
     }
     /// Fetches the best available sale for a game(if such a sale exists)
     pub fn fetch_sale(&self, game_id: i32) -> Option<Sale> {
