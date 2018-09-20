@@ -94,3 +94,10 @@ fn install() {
         .collect::<Vec<Upload>>();
     but.install_game(game, install_id.id.to_string(), uploads.pop().unwrap());
 }
+#[test]
+fn profile_list () {
+    b.with(|but| {
+        let profiles = but.profile_list();
+        println!("{:?}", profiles);
+    });
+}

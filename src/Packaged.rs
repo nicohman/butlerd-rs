@@ -43,15 +43,18 @@ pub struct DownList {
     pub downloads: Option<Vec<Download>>,
 }
 #[derive(Serialize, Deserialize, Debug)]
-pub struct PassLogRes {
-    pub profile: Profile,
-    pub cookie: Map<String, Value>,
-}
-#[derive(Serialize, Deserialize, Debug)]
 pub struct GamesSearchRes {
     pub games: Option<Vec<Game>>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DidCancel {
     pub didCancel: bool,
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Success {
+    pub success: bool,
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct FetchProfiles {
+    pub profiles: Vec<Profile>,
 }

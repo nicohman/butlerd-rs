@@ -192,7 +192,7 @@ pub struct InstallLocationSizeInfo {
     /// Negative if unknown
     pub totalSize: i64,
 }
-/// The reason to download a game
+/// The reason you gave to download a game
 #[derive(Serialize, Deserialize, Debug)]
 pub enum DownloadReason {
     #[serde(rename = "install")]
@@ -251,4 +251,32 @@ pub struct VersionInfo {
     pub version: String,
     /// More verbose version
     pub versionString: String,
+}
+/// What you get back when you check for updates. Each item in updates represents a different game
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CheckUpdate {
+    pub updates: Vec<GameUpdate>,
+    pub warnings: Vec<String>
+}
+/// Information on an avavilable update for a game
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GameUpdate {
+    pub caveId: String,
+    pub game: Game,
+    /// Whether or not this is a direct update within the same channel. See [here](http://docs.itch.ovh/butlerd/master/#/?id=gameupdate)
+    pub direct: bool,
+    pub choices: Option<Vec<GameUpdateChoice>>
+}
+/// A choice of a possible update for a game. Higher confidence is usually better. 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GameUpdateChoice {
+    pub upload: Upload,
+    pub build: Option<Build>,
+    /// How confident butler is that this is the `right` update
+    pub confidence: f64
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PassLogRes {
+    pub profile: Profile,
+    pub cookie: Map<String, Value>,
 }
