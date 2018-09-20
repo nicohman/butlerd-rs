@@ -49,5 +49,9 @@ pub struct PassLogRes {
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GamesSearchRes {
-    pub games: Option<Vec<Game>>
+    pub games: Option<Vec<Game>>,
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DidCancel {
+    pub didCancel: bool,
 }
