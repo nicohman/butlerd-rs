@@ -111,3 +111,10 @@ fn test_login_fetch_keys () {
         println!("{:?}", keys);
     });
 }
+#[test]
+fn commons() {
+    b.with(|but| {
+        let commons = but.fetch_commons();
+        println!("{:?}", commons);
+    });
+}

@@ -37,11 +37,11 @@ static PRE_PATH: &str = "";
 const POST: Method = Method::POST;
 /// Represents a connection to a butlerd instance
 pub struct Butler {
-    pub secret: String,
-    pub address: String,
-    pub client: reqwest::Client,
-    pub pre_dir: String,
-    pub client_launch: reqwest::Client,
+    secret: String,
+    address: String,
+    client: reqwest::Client,
+    pre_dir: String,
+    client_launch: reqwest::Client,
 }
 impl Butler {
     /// Initializes a new butlerd instance. It will close when your program does.
@@ -174,23 +174,23 @@ impl Butler {
     }
     /// Removes a profile's saved info. Also removes it from profile_list. Returns true if
     /// successful.
-    pub fn profile_forget(&self, profileId: i32) -> bool {
+    pub fn profile_forget(&self, profile_id: i32) -> bool {
         let sis =
             self.request(
                 POST,
                 "/call/Profile.Forget",
-                json!({ "profileId": profileId }).to_string(),
+                json!({ "profileId": profile_id }).to_string(),
             ).expect("Couldn't forget profile");
         let suc: Success = pres(sis).unwrap();
         suc.success
     }
     /// Logs into a profile using saved credentials
-    pub fn login_saved(&self, profileId: i32) -> Profile {
+    pub fn login_saved(&self, profile_id: i32) -> Profile {
         let pis =
             self.request(
                 POST,
                 "/call/Profile.UseSavedLogin",
-                json!({ "profileId": profileId }).to_string(),
+                json!({ "profileId": profile_id }).to_string(),
             ).expect("Couldn't login using saved credentials");
         let profile: FetchProfile = pres(pis).unwrap();
         profile.profile
@@ -210,6 +210,11 @@ impl Butler {
                 vec![("username", &username), ("password", &password)],
             ).unwrap();
         profile
+    }
+    /// Fetches all common/cached items and returns summaries
+    pub fn fetch_commons(&self) -> Commons {
+        let comm : Commons = self.res_req("/call/Fetch.Commons", vec![]).expect("Couldn't fetch commons");
+        comm
     }
     /// Fetches a vec of games owned by a specific profile id
     pub fn fetch_profile_games(&self, profile_id: i32) -> Vec<ProfileGame> {
@@ -332,7 +337,7 @@ impl Butler {
         ).expect("Couldn't queue download");
     }
     /// Downloads all games in the queue. Completes when they are all done
-    pub fn downloads_drive(&self, queue_id: String) {
+    pub fn downloads_drive(&self) {
         let mut hclient = hyper::Client::new();
         let uri = "http://".to_string() + &self.address + "/call/Downloads.Drive";
         let mut builder = hyper::Request::builder();

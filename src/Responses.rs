@@ -285,9 +285,34 @@ pub struct PassLogRes {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DownloadKey {
     pub id: i64,
-    pub gameId: i64,
+    pub gameId: i32,
     pub game: Game,
     pub ownerId: i64,
     #[serde(flatten)]
     pub dates: Dates,
 }
+/// Returned from fetch_commons
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Commons {
+    pub download_keys: Vec<DownloadKeySummary>,
+    pub caves: Vec<CaveSummary>,
+    pub install_locations: Vec<InstallLocationSummary>
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadKeySummary {
+    pub id: i64,
+    pub game_id: i32,
+    pub created_at: String
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CaveSummary {
+    pub id: String,
+    pub game_id: i32,
+    pub last_touched_at: Option<String>,
+    pub seconds_run: i32,
+    pub installed_size: i64
+}
+
