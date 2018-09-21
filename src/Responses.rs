@@ -297,14 +297,14 @@ pub struct DownloadKey {
 pub struct Commons {
     pub download_keys: Vec<DownloadKeySummary>,
     pub caves: Vec<CaveSummary>,
-    pub install_locations: Vec<InstallLocationSummary>
+    pub install_locations: Vec<InstallLocationSummary>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadKeySummary {
     pub id: i64,
     pub game_id: i32,
-    pub created_at: String
+    pub created_at: String,
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -313,6 +313,5 @@ pub struct CaveSummary {
     pub game_id: i32,
     pub last_touched_at: Option<String>,
     pub seconds_run: i32,
-    pub installed_size: i64
+    pub installed_size: i64,
 }
-

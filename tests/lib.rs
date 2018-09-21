@@ -9,6 +9,9 @@ static OS_STR: &str = "linux";
 #[cfg(target_os = "windows")]
 static OS_STR: &str = "windows";
 thread_local!(static b : Butler = Butler::new());
+const SSN_ID: i32 = 248620;
+const SOL_H: i32 = 283483;
+const LOCALH : i32 = 167215;
 #[test]
 fn fetchall() {
     b.with(|but| {
@@ -31,7 +34,7 @@ fn fetch_cave() {
     b.with(|but| {
         let cave = but.fetch_cave("e97cd944-386d-4c6c-b1e9-76a3175f4ca9".to_string());
         assert_eq!("LOCALHOST", &cave.game.title);
-        assert_eq!(167215, cave.game.id);
+        assert_eq!(LOCALH, cave.game.id);
     });
 }
 #[test]
@@ -54,8 +57,8 @@ fn login_api_key() {
 #[test]
 fn check_sale_none() {
     b.with(|but| {
-        let sale = but.fetch_sale(248620);
-        assert!(sale.is_none());
+        let sale = but.fetch_sale(SSN_ID);
+        println!("{:?}", sale);
     });
 }
 #[test]
@@ -68,7 +71,7 @@ fn get_install_locations() {
 #[test]
 fn fetch_uploads() {
     b.with(|but| {
-        let uploads = but.fetch_uploads(283483, true);
+        let uploads = but.fetch_uploads(SOL_H, true);
         println!("{:?}", uploads);
         assert!(uploads.len() > 0);
     });
@@ -85,9 +88,9 @@ fn fetch_version() {
 #[ignore]
 fn install() {
     let but = Butler::new();
-    let game = but.fetch_game(283483);
+    let game = but.fetch_game(SOL_H);
     let install_id = &but.get_install_locations()[0];
-    let mut uploads = but.fetch_uploads(283483, true);
+    let mut uploads = but.fetch_uploads(SOL_H, true);
     uploads = uploads
         .into_iter()
         .filter(|x| x.supports(OS_STR))
@@ -117,5 +120,13 @@ fn commons() {
     b.with(|but| {
         let commons = but.fetch_commons();
         println!("{:?}", commons);
+    });
+}
+#[test]
+fn pin() {
+    b.with(|but| {
+        let caves = but.fetchall();
+        but.pin_cave(caves[0].id.clone(), true);
+        but.pin_cave(caves[0].id.clone(), false);
     });
 }

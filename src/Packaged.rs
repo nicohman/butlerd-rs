@@ -60,5 +60,5 @@ pub struct FetchProfiles {
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProfileKeys {
-    pub items: Vec<DownloadKey>
+    pub items: Vec<DownloadKey>,
 }
