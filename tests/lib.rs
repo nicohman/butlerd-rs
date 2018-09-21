@@ -102,12 +102,13 @@ fn profile_list () {
     });
 }
 #[test]
+#[ignore]
 fn test_login_fetch_keys () {
     b.with(|but| {
-        let username = env::var_os("ITCH_USERNAME");
-        let password = env::var_os("ITCH_PASSWORD");
+        let username = env::var_os("ITCH_USERNAME").unwrap().into_string().unwrap();
+        let password = env::var_os("ITCH_PASSWORD").unwrap().into_string().unwrap();
         let profile = but.login_password(username, password);
-        let keys = fetch_profile_keys(profile.id, true);
+        let keys = but.fetch_profile_keys(profile.profile.id, true);
         println!("{:?}", keys);
     });
 }

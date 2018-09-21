@@ -407,7 +407,7 @@ impl Butler {
         let id = inf.id.clone();
         let stf = inf.staging_folder.clone();
         self.download_queue(inf);
-        self.downloads_drive(id.clone());
+        self.downloads_drive();
         println!("Downloads drive successful");
         self.install_perform(id, stf);
         println!("Install perform successful");
