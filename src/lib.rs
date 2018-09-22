@@ -153,13 +153,13 @@ impl Butler {
         game.game
     }
     ///Fetches specific cave by id
-    pub fn fetch_cave(&self, cave_id: String) -> Cave {
-        let cave: FetchCave = self.res_req("/call/Fetch.Cave", vec![("caveId", &cave_id)])
+    pub fn fetch_cave(&self, cave_id: &str) -> Cave {
+        let cave: FetchCave = self.res_req("/call/Fetch.Cave", vec![("caveId", cave_id)])
             .unwrap();
         cave.cave
     }
     /// Makes a cave 'pinned' or not depending on pinned
-    pub fn pin_cave(&self, cave_id: String, pinned: bool) {
+    pub fn pin_cave(&self, cave_id: &str, pinned: bool) {
         self.request(
             POST,
             "/call/Caves.SetPinned",
@@ -170,7 +170,7 @@ impl Butler {
         ).expect("Couldn't pin cave");
     }
     /// Launches game by CaveID. Note that this will not complete until the game is closed.
-    pub fn launch_game(&self, cave_id: String) {
+    pub fn launch_game(&self, cave_id: &str) {
         self.request_l(
             POST,
             "/call/Launch",
@@ -209,17 +209,17 @@ impl Butler {
         profile.profile
     }
     /// Given an API key, logs into a profile and returns profile.
-    pub fn login_api_key(&self, api_key: String) -> Profile {
+    pub fn login_api_key(&self, api_key: &str) -> Profile {
         let profile: FetchProfile =
-            self.res_req("/call/Profile.LoginWithAPIKey", vec![("apiKey", &api_key)])
+            self.res_req("/call/Profile.LoginWithAPIKey", vec![("apiKey", api_key)])
                 .unwrap();
         profile.profile
     }
     /// Given an username and password, logs into a profile and returns profile and cookie.
-    pub fn login_password(&self, username: String, password: String) -> PassLogRes {
+    pub fn login_password(&self, username: &str, password: &str) -> PassLogRes {
         let profile: PassLogRes = self.res_req(
             "/call/Profile.LoginWithPassword",
-            vec![("username", &username), ("password", &password)],
+            vec![("username", username), ("password", password)],
         ).unwrap();
         profile
     }
@@ -297,12 +297,12 @@ impl Butler {
     pub fn install_queue(
         &self,
         game: Game,
-        install_location_id: String,
+        install_location_id: &str,
         upload: Upload,
         reason: DownloadReason,
     ) -> QueueResponse {
         let mut req = InstallQueueReq {
-            install_location_id: install_location_id,
+            install_location_id: install_location_id.to_string(),
             reason: dr_str(reason),
             game: game,
             upload: upload,
@@ -315,7 +315,7 @@ impl Butler {
         return queue;
     }
     /// Performs an Install. Download must be completed beforehand
-    pub fn install_perform(&self, queue_id: String, staging_folder: String) {
+    pub fn install_perform(&self, queue_id: &str, staging_folder: &str) {
         self.request(
             POST,
             "/call/Install.Perform",
@@ -376,7 +376,7 @@ impl Butler {
         done.didCancel
     }
     /// Discards one download
-    pub fn discard_download(&self, download_id: String) {
+    pub fn discard_download(&self, download_id: &str) {
         self.request(
             POST,
             "/call/Downloads.Discard",
@@ -384,7 +384,7 @@ impl Butler {
         ).expect("Couldn't discard download");
     }
     /// Prioritizes by download id
-    pub fn prioritize_download(&self, download_id: String) {
+    pub fn prioritize_download(&self, download_id: &str) {
         self.request(
             POST,
             "/call/Downloads.Prioritize",
@@ -392,7 +392,7 @@ impl Butler {
         ).expect("Couldn't prioritize download");
     }
     /// Retries an errored download id
-    pub fn download_retry(&self, download_id: String) {
+    pub fn download_retry(&self, download_id: &str) {
         self.request(
             POST,
             "/call/Downloads.Retry",
@@ -413,14 +413,14 @@ impl Butler {
     }
     /// A helper function that performs all of the game installation/download steps for you.
     /// Recommended over doing installation yourself.
-    pub fn install_game(&self, game: Game, install_location_id: String, upload: Upload) {
+    pub fn install_game(&self, game: Game, install_location_id: &str, upload: Upload) {
         let inf = self.install_queue(game, install_location_id, upload, DownloadReason::Install);
         let id = inf.id.clone();
         let stf = inf.staging_folder.clone();
         self.download_queue(inf);
         self.downloads_drive();
         println!("Downloads drive successful");
-        self.install_perform(id, stf);
+        self.install_perform(&id, &stf);
         println!("Install perform successful");
     }
     /// Fetches a vec of Downloads from the queue, returning None if none are available
@@ -429,7 +429,7 @@ impl Butler {
         down.downloads
     }
     /// Searches games for string. Requires profileid.
-    pub fn search_games(&self, profile_id: i32, query: String) -> Option<Vec<Game>> {
+    pub fn search_games(&self, profile_id: i32, query: &str) -> Option<Vec<Game>> {
         let gis = self.request(
             POST,
             "/call/Seach.Games",
@@ -457,7 +457,7 @@ impl Butler {
         ils
     }
     /// Uninstalls a cave
-    pub fn uninstall(&self, cave_id: String) {
+    pub fn uninstall(&self, cave_id: &str) {
         self.request(
             POST,
             "/call/Uninstall.Perform",
