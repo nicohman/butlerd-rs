@@ -6,6 +6,8 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate hyper;
 extern crate serde;
+extern crate regex;
+use regex::Regex;
 use reqwest::Method;
 use serde::de::DeserializeOwned;
 use std::env;
@@ -16,6 +18,7 @@ use std::collections::HashMap;
 use std::fs;
 use Packaged::*;
 use Responses::*;
+use serde_json::value::Map;
 #[cfg(target_os = "macos")]
 static DB_PATH: &str = "";
 #[cfg(target_os = "linux")]
@@ -49,7 +52,6 @@ impl Butler {
         let mut file: fs::File;
         if fs::metadata(LOG_PATH).is_ok() {
             if fs::remove_file(LOG_PATH).is_err() {
-                println!("Failed to remove previous log at {}. May crash.", LOG_PATH);
                 file = fs::File::open(LOG_PATH).unwrap();
             } else {
                 file = fs::File::create(LOG_PATH).unwrap();
@@ -69,34 +71,61 @@ impl Butler {
         //TODO: REPLACE
         ::std::thread::sleep_ms(750);
         let mut bd = String::new();
+        let reg = Regex::new(r"\{(?:.|\s)+\}").unwrap();
         fs::File::open(LOG_PATH)
             .unwrap()
             .read_to_string(&mut bd)
             .unwrap();
+        bd = reg.find(&bd).unwrap().as_str().to_string();
         bd = bd.replace("\\\"", "");
-        bd = bd.lines().next().unwrap().to_string();
+        let mut lines = bd.lines();
+        let mut done = false;
+        let mut pmeta = BStart {
+            http: Map::new(),
+            https: Map::new(),
+            secret: String::new()
+        };
+        while (!done) {
+            let mut ltry = lines.next();
+            if ltry.is_some() {
+                let try = ltry.unwrap().to_string();
+                let td = serde_json::from_str(&try.trim());
+                if td.is_ok() {
+                    pmeta = td.unwrap();
+                    done = true;
+                }
+            } else {
+                break;
+            }
+        }
+        if (done) {
+            /*bd = bd.lines().next().unwrap().to_string();
+        println!("{}",bd);
         let pmeta: BStart =
-            serde_json::from_str(&bd.trim()).expect("Couldn't deserialze butler start");
-        let secret = pmeta.secret.to_string();
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("X-Secret", secret.parse().unwrap());
-        headers.insert("X-ID", "0".parse().unwrap());
-        let mut client = reqwest::Client::builder();
-        let mut client_launch = reqwest::Client::builder();
-        client_launch = client_launch.default_headers(headers.clone());
-        client = client.default_headers(headers);
-        client_launch = client_launch.timeout(None);
-        let built = client.build().unwrap();
-        let builtl = client_launch.build().unwrap();
-        Butler {
-            secret: secret,
-            address: pmeta.http[&"address".to_string()].to_string().replace(
-                "\"",
-                "",
-            ),
-            client: built,
-            pre_dir: PRE_PATH.to_string().replace("~", &get_home()),
-            client_launch: builtl,
+            serde_json::from_str(&bd.trim()).expect("Couldn't deserialze butler start");*/
+            let secret = pmeta.secret.to_string();
+            let mut headers = reqwest::header::HeaderMap::new();
+            headers.insert("X-Secret", secret.parse().unwrap());
+            headers.insert("X-ID", "0".parse().unwrap());
+            let mut client = reqwest::Client::builder();
+            let mut client_launch = reqwest::Client::builder();
+            client_launch = client_launch.default_headers(headers.clone());
+            client = client.default_headers(headers);
+            client_launch = client_launch.timeout(None);
+            let built = client.build().unwrap();
+            let builtl = client_launch.build().unwrap();
+            Butler {
+                secret: secret,
+                address: pmeta.http[&"address".to_string()].to_string().replace(
+                    "\"",
+                    "",
+                ),
+                client: built,
+                pre_dir: PRE_PATH.to_string().replace("~", &get_home()),
+                client_launch: builtl,
+            }
+        } else {
+            panic!("Couldn't start butler");
         }
     }
     ///Shuts down butler daemon.
@@ -290,7 +319,8 @@ impl Butler {
     }
     /// Cancels an install. Needs an id
     pub fn install_cancel(&self, id: &str) -> bool {
-        let mut d : DidCancel = self.res_req("/call/Install.Cancel", vec![("id", id)]).unwrap();
+        let mut d: DidCancel = self.res_req("/call/Install.Cancel", vec![("id", id)])
+            .unwrap();
         d.didCancel
     }
     /// Queues up a game installation
@@ -443,17 +473,27 @@ impl Butler {
     }
     /// Adds a new install location
     pub fn install_location_add(&self, path: &str) {
-        self.request(POST, "/call/Install.Locations.Add", json!({"path": path}).to_string()).expect("Couldn't add new install location");
+        self.request(
+            POST,
+            "/call/Install.Locations.Add",
+            json!({"path": path}).to_string(),
+        ).expect("Couldn't add new install location");
     }
     /// Removes an install location
     pub fn install_location_remove(&self, id: &str) {
-        self.request(POST, "/call/Install.Locations.Remove", json!({
+        self.request(
+            POST,
+            "/call/Install.Locations.Remove",
+            json!({
             "id": id
-        }).to_string()).expect("Couldn't remove install location");
+        }).to_string(),
+        ).expect("Couldn't remove install location");
     }
     /// Gets an install location from a previously fetched id
     pub fn install_location_get_by_id(&self, id: &str) -> InstallLocationSummary {
-        let ils : InstallLocationSummary = self.res_req("/call/Install.Locations.GetByID", vec![("id", id)]).expect("Couldn't get install location");
+        let ils: InstallLocationSummary =
+            self.res_req("/call/Install.Locations.GetByID", vec![("id", id)])
+                .expect("Couldn't get install location");
         ils
     }
     /// Uninstalls a cave
