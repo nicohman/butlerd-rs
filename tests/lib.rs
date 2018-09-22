@@ -2,6 +2,7 @@ extern crate butlerd;
 use butlerd::Butler;
 use butlerd::Responses::*;
 use std::env;
+use std::fs;
 #[cfg(target_os = "macos")]
 static OS_STR: &str = "macos";
 #[cfg(target_os = "linux")]
@@ -128,5 +129,14 @@ fn pin() {
         let caves = but.fetchall();
         but.pin_cave(caves[0].id.clone(), true);
         but.pin_cave(caves[0].id.clone(), false);
+    });
+}
+#[test]
+fn install_location_add() {
+    b.with(|but| {
+        if fs::metadata("/tmp/butlertest").is_err() {
+            fs::create_dir("/tmp/butlertest").expect("Couldn't create test dir");
+        }
+         but.install_location_add("/tmp/butlertest");
     });
 }

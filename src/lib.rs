@@ -441,6 +441,21 @@ impl Butler {
         let games: GamesSearchRes = pres(gis).unwrap();
         return games.games;
     }
+    /// Adds a new install location
+    pub fn install_location_add(&self, path: &str) {
+        self.request(POST, "/call/Install.Locations.Add", json!({"path": path}).to_string()).expect("Couldn't add new install location");
+    }
+    /// Removes an install location
+    pub fn install_location_remove(&self, id: &str) {
+        self.request(POST, "/call/Install.Locations.Remove", json!({
+            "id": id
+        }).to_string()).expect("Couldn't remove install location");
+    }
+    /// Gets an install location from a previously fetched id
+    pub fn install_location_get_by_id(&self, id: &str) -> InstallLocationSummary {
+        let ils : InstallLocationSummary = self.res_req("/call/Install.Locations.GetByID", vec![("id", id)]).expect("Couldn't get install location");
+        ils
+    }
     /// Uninstalls a cave
     pub fn uninstall(&self, cave_id: String) {
         self.request(
@@ -460,6 +475,7 @@ impl Butler {
             b = serde_json::to_string(&mp(body)).unwrap();
         }
         let ris = self.request(POST, url, b).unwrap();
+        println!("{}",ris);
         let res = pres(ris);
         res
     }
