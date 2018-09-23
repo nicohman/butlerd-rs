@@ -271,6 +271,26 @@ impl Butler {
         let games: FetchPGames = pres(pvs).unwrap();
         games.items
     }
+    /// Fetches download key
+    pub fn fetch_download_key(&self, profile_id: i32, download_key_id: i32, fresh: bool) -> DownloadKey {
+        let dis = self.request(POST, "/call/Fetch.DownloadKey", json!({
+            "profileId": profile_id,
+            "downloadKeyId": download_key_id,
+            "fresh":fresh
+        }).to_string()).expect("Couldn't fetch download key");
+        let keys : FetchDKey = pres(dis).unwrap();
+        keys.downloadKey
+    }
+    /// Fetches collection info. Does not include games.
+    pub fn fetch_collection(&self, profile_id: i32, collection_id: i32, fresh: bool) -> Collection {
+        let cis = self.request(POST, "/call/Fetch.Collection", json!({
+            "profileId":profile_id,
+            "collectionId":collection_id,
+            "fresh":fresh
+        }).to_string()).expect("Couldn't fetch collection");
+        let collection : FetchCollection = pres(cis).unwrap();
+        collection.collection
+    }
     /// Fetches owned download keys for a profile. Pass fresh as true to force butler to refresh
     /// cache
     pub fn fetch_profile_keys(&self, profile_id: i32, fresh: bool) -> Vec<DownloadKey> {

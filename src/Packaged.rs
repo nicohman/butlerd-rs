@@ -62,3 +62,11 @@ pub struct FetchProfiles {
 pub struct ProfileKeys {
     pub items: Vec<DownloadKey>,
 }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct FetchDKey {
+    pub downloadKey: DownloadKey
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct FetchCollection {
+    pub collection: Collection
+}
