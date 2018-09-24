@@ -202,7 +202,8 @@ impl Butler {
             .unwrap();
         profile.profile
     }
-    /// Given an username and password, logs into a profile and returns profile and cookie.
+    /// Given an username and password, logs into a profile and returns profile and cookie. May
+    /// fail if a captcha or 2factor is required. Working on fix.
     pub fn login_password(&self, username: String, password: String) -> PassLogRes {
         let profile: PassLogRes =
             self.res_req(
