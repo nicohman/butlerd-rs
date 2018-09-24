@@ -7,6 +7,7 @@ extern crate serde_json;
 extern crate hyper;
 extern crate serde;
 extern crate regex;
+extern crate rand;
 use regex::Regex;
 use reqwest::Method;
 use serde::de::DeserializeOwned;
@@ -17,8 +18,10 @@ pub mod Responses;
 use std::collections::HashMap;
 use std::fs;
 use Packaged::*;
+use hyper::rt::Future;
 use Responses::*;
 use serde_json::value::Map;
+use hyper::Client;
 #[cfg(target_os = "macos")]
 static DB_PATH: &str = "";
 #[cfg(target_os = "linux")]
@@ -28,7 +31,7 @@ static DB_PATH: &str = "";
 #[cfg(target_os = "macos")]
 static LOG_PATH: &str = "";
 #[cfg(target_os = "linux")]
-static LOG_PATH: &str = "/tmp/butlerdrs.log";
+//static LOG_PATH: &str = "/tmp/butlerdrs.log";
 #[cfg(target_os = "windows")]
 static LOG_PATH: &str = "";
 #[cfg(target_os = "macos")]
@@ -45,16 +48,23 @@ pub struct Butler {
     client: reqwest::Client,
     pre_dir: String,
     client_launch: reqwest::Client,
+    hclient: Client<hyper::client::HttpConnector,hyper::Body>
 }
 impl Butler {
     /// Initializes a new butlerd instance. It will close when your program does.
     pub fn new() -> Butler {
+        let LOG_PATH = &("/tmp/butlerdrs".to_string()+&rand::random::<f64>().to_string()+".log");
         let mut file: fs::File;
+        if fs::remove_file(LOG_PATH).is_ok() {
+            file = fs::File::create(LOG_PATH).unwrap();
+        } else {
+            
+        }
         if fs::metadata(LOG_PATH).is_ok() {
             if fs::remove_file(LOG_PATH).is_err() {
-                file = fs::File::open(LOG_PATH).unwrap();
-            } else {
                 file = fs::File::create(LOG_PATH).unwrap();
+            } else {
+                file = fs::File::open(LOG_PATH).unwrap();
             }
         } else {
             file = fs::File::create(LOG_PATH).unwrap();
@@ -69,13 +79,22 @@ impl Butler {
             .spawn()
             .expect("Couldn't start butler daemon");
         //TODO: REPLACE
-        ::std::thread::sleep_ms(750);
-        let mut bd = String::new();
+        let mut finish = false;
+        let mut bd: String = String::new();
         let reg = Regex::new(r"\{(?:.|\s)+\}").unwrap();
+        while(!finish) {
+            bd = String::new();
         fs::File::open(LOG_PATH)
             .unwrap()
             .read_to_string(&mut bd)
             .unwrap();
+            let mut res = reg.find(&bd);
+            if res.is_some() {
+                finish = true;
+            } else {
+                ::std::thread::sleep_ms(250);
+            }
+        }
         bd = reg.find(&bd).unwrap().as_str().to_string();
         bd = bd.replace("\\\"", "");
         let mut lines = bd.lines();
@@ -95,14 +114,11 @@ impl Butler {
                     done = true;
                 }
             } else {
-                break;
+                ::std::thread::sleep_ms(100);
+               // break;
             }
         }
         if (done) {
-            /*bd = bd.lines().next().unwrap().to_string();
-        println!("{}",bd);
-        let pmeta: BStart =
-            serde_json::from_str(&bd.trim()).expect("Couldn't deserialze butler start");*/
             let secret = pmeta.secret.to_string();
             let mut headers = reqwest::header::HeaderMap::new();
             headers.insert("X-Secret", secret.parse().unwrap());
@@ -123,6 +139,7 @@ impl Butler {
                 client: built,
                 pre_dir: PRE_PATH.to_string().replace("~", &get_home()),
                 client_launch: builtl,
+                hclient: Client::new()
             }
         } else {
             panic!("Couldn't start butler");
@@ -226,6 +243,17 @@ impl Butler {
         ).expect("Couldn't forget profile");
         let suc: Success = pres(sis).unwrap();
         suc.success
+    }
+    /// Disables updates for a cave
+    pub fn snooze_cave(&self, cave_id: &str) {
+        let uri = "http://".to_string() + &self.address + "/call/Snooze.Cave";
+        let mut builder = hyper::Request::builder();
+        builder.method("POST");
+        builder.header("X-Secret", self.secret.as_str());
+        builder.header("X-ID", "0");
+        builder.uri(uri);
+        let mut request = builder.body(hyper::Body::empty()).unwrap();
+        let mut res = self.hclient.request(request); 
     }
     /// Logs into a profile using saved credentials
     pub fn login_saved(&self, profile_id: i32) -> Profile {
@@ -400,7 +428,6 @@ impl Butler {
     }
     /// Downloads all games in the queue. Completes when they are all done
     pub fn downloads_drive(&self) {
-        let mut hclient = hyper::Client::new();
         let uri = "http://".to_string() + &self.address + "/call/Downloads.Drive";
         let mut builder = hyper::Request::builder();
         builder.method("POST");
@@ -408,7 +435,7 @@ impl Butler {
         builder.header("X-ID", "0");
         builder.uri(uri);
         let mut request = builder.body(hyper::Body::empty()).unwrap();
-        hclient.request(request);
+        self.hclient.request(request);
         let mut done = false;
         while !done {
             ::std::thread::sleep_ms(1000);

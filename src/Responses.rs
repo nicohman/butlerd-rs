@@ -255,8 +255,8 @@ pub struct VersionInfo {
 /// What you get back when you check for updates. Each item in updates represents a different game
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CheckUpdate {
-    pub updates: Vec<GameUpdate>,
-    pub warnings: Vec<String>,
+    pub updates: Option<Vec<GameUpdate>>,
+    pub warnings: Option<Vec<String>>,
 }
 /// Information on an avavilable update for a game
 #[derive(Serialize, Deserialize, Debug)]

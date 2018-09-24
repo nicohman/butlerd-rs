@@ -17,9 +17,6 @@ const LOCALH : i32 = 167215;
 fn fetchall() {
     b.with(|but| {
         let games = but.fetchall();
-        /*for game in games {
-            println!("{}", game.game.title);
-        }*/
     });
 }
 #[test]
@@ -138,5 +135,17 @@ fn install_location_add() {
             fs::create_dir("/tmp/butlertest").expect("Couldn't create test dir");
         }
          but.install_location_add("/tmp/butlertest");
+    });
+}
+#[test]
+fn snooze_cave() {
+    b.with(|but| {
+        but.snooze_cave("e97cd944-386d-4c6c-b1e9-76a3175f4ca9");
+    });
+}
+#[test]
+fn check_updates() {
+    b.with(|but| {
+        but.check_update(vec!["e97cd944-386d-4c6c-b1e9-76a3175f4ca9".to_string()]);
     });
 }
