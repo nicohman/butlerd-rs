@@ -255,8 +255,8 @@ pub struct VersionInfo {
 /// What you get back when you check for updates. Each item in updates represents a different game
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CheckUpdate {
-    pub updates: Vec<GameUpdate>,
-    pub warnings: Vec<String>,
+    pub updates: Option<Vec<GameUpdate>>,
+    pub warnings: Option<Vec<String>>,
 }
 /// Information on an avavilable update for a game
 #[derive(Serialize, Deserialize, Debug)]
@@ -291,21 +291,23 @@ pub struct DownloadKey {
     #[serde(flatten)]
     pub dates: Dates,
 }
-/// Returned from fetch_commons
+/// Returned from fetch_commons. Most of butler's cached info
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Commons {
     pub download_keys: Vec<DownloadKeySummary>,
     pub caves: Vec<CaveSummary>,
-    pub install_locations: Vec<InstallLocationSummary>
+    pub install_locations: Vec<InstallLocationSummary>,
 }
+/// Summary of a DownloadKey, but not an actual DownloadKey
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadKeySummary {
     pub id: i64,
     pub game_id: i32,
-    pub created_at: String
+    pub created_at: String,
 }
+/// Summary of a cave's info
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct CaveSummary {
@@ -313,6 +315,33 @@ pub struct CaveSummary {
     pub game_id: i32,
     pub last_touched_at: Option<String>,
     pub seconds_run: i32,
-    pub installed_size: i64
+    pub installed_size: i64,
 }
-
+/// Info on a game collection
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Collection {
+    pub id: i32,
+    pub title: String,
+    #[serde(flatten)]
+    pub dates: Dates,
+    pub games_count: i32,
+    /// Presence depends on whether fetched with fetch_collection or fetch_collection_games
+    pub collection_games: Option<Vec<CollectionGame>>,
+    pub user_id: i32,
+    pub user: User
+}
+/// Info on a game within a game collection
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CollectionGame {
+    pub collection_id: i32,
+    pub collection: Collection,
+    pub game_id: i32,
+    pub game: Game,
+    pub position: i32,
+    pub blurb: String,
+    pub user_id: i32,
+    #[serde(flatten)]
+    pub dates: Dates,
+}
