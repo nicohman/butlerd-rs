@@ -114,7 +114,9 @@ impl Butler {
                     done = true;
                 }
             } else {
-                ::std::thread::sleep_ms(100);
+                ::std::thread::sleep_ms(500);
+                fs::remove_file(LOG_PATH).expect("Couldn't remove log file early");
+                return Butler::new();
                // break;
             }
         }
@@ -130,6 +132,7 @@ impl Butler {
             client_launch = client_launch.timeout(None);
             let built = client.build().unwrap();
             let builtl = client_launch.build().unwrap();
+            fs::remove_file(LOG_PATH).expect("Couldn't remove log file");
             Butler {
                 secret: secret,
                 address: pmeta.http[&"address".to_string()].to_string().replace(
