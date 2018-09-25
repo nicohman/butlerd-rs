@@ -1,7 +1,5 @@
 #![allow(non_snake_case)]
 use Responses::*;
-use serde_json::Value;
-use serde_json::Map;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FetchUploads {
     pub uploads: Vec<Upload>,
