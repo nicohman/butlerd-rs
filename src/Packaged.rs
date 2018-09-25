@@ -70,3 +70,15 @@ pub struct FetchDKey {
 pub struct FetchCollection {
     pub collection: Collection
 }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct FetchCollectionGames {
+    pub items : Option<Vec<CollectionGame>>
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct FetchPCol {
+    pub items : Option<Vec<Collection>>
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SearchUsers {
+    pub users : Option<Vec<User>>
+}

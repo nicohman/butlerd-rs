@@ -313,7 +313,7 @@ impl Butler {
         let keys : FetchDKey = pres(dis).unwrap();
         keys.downloadKey
     }
-    /// Fetches collection info. Does not include games.
+    /// Fetches collection info. Does not include games
     pub fn fetch_collection(&self, profile_id: i32, collection_id: i32, fresh: bool) -> Collection {
         let cis = self.request(POST, "/call/Fetch.Collection", json!({
             "profileId":profile_id,
@@ -322,6 +322,25 @@ impl Butler {
         }).to_string()).expect("Couldn't fetch collection");
         let collection : FetchCollection = pres(cis).unwrap();
         collection.collection
+    }
+    /// Fetches all collections for a profile. Does not include games
+    pub fn fetch_profile_collections(&self, profile_id: i32, fresh: bool) -> Option<Vec<Collection>> {
+        let cis = self.request(POST, "/call/Fetch.Collection", json!({
+            "profileId": profile_id,
+            "fresh": fresh
+        }).to_string()).expect("Couldn't fetch profile collections");
+        let collections: FetchPCol = pres(cis).unwrap();
+        collections.items
+    }
+    /// Fetches games in a collection
+    pub fn fetch_collection_games(&self, profile_id: i32, collection_id : i32, fresh : bool) -> Option<Vec<CollectionGame>> {
+        let cis = self.request(POST, "/call/Fetch.Collection.Games", json!({
+            "profileId": profile_id,
+            "collectionId": collection_id,
+            "fresh":fresh
+        }).to_string()).expect("Couldn't fetch collection games");
+        let games : FetchCollectionGames = pres(cis).unwrap();
+        games.items
     }
     /// Fetches owned download keys for a profile. Pass fresh as true to force butler to refresh
     /// cache
@@ -336,6 +355,15 @@ impl Butler {
         ).expect("Couldn't fetch profile keys");
         let keys: ProfileKeys = pres(dis).unwrap();
         keys.items
+    }
+    /// Searches users
+    pub fn search_users(&self, profile_id: i32, query: &str) -> Option<Vec<User>> {
+        let uis = self.request(POST, "/call/Search.Users", json!({
+            "profileId":profile_id,
+            "query":query
+        }).to_string()).expect("Couldn't search users");
+        let us : SearchUsers = pres(uis).unwrap();
+        us.users
     }
     /// Fetches the best available sale for a game(if such a sale exists)
     pub fn fetch_sale(&self, game_id: i32) -> Option<Sale> {
@@ -354,6 +382,11 @@ impl Butler {
         let idirs: FetchIDirs = self.res_req("/call/Install.Locations.List", vec![])
             .unwrap();
         idirs.installLocations
+    }
+    /// Gets info on a filesystem
+    pub fn statfs(&self, path: &str) -> FsInfo {
+        let res : FsInfo = self.res_req("/call/System.StatFS", vec![("path", path)]).unwrap();
+        res
     }
     /// Checks if an update is available for a vec of Caves. If you pass an empty vec, all caves
     /// will be checked.

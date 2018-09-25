@@ -345,3 +345,9 @@ pub struct CollectionGame {
     #[serde(flatten)]
     pub dates: Dates,
 }
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct FsInfo {
+    pub free_size : i64,
+    pub total_size : i64
+}
