@@ -236,6 +236,23 @@ impl Butler {
             .expect("Couldn't list saved profiles");
         profiles.profiles
     }
+    /// Sets a specific profile info value
+    pub fn profile_put(&self, profile_id: i32, key: &str, value: &str) {
+            self.request(POST, "/call/Profile.Data.Put", json!({
+                "profileId":profile_id,
+                "key":key,
+                "value":value
+            }).to_string()).expect("Couldn't put profile data");
+    }
+    /// Gets a specific profile info value
+    pub fn profile_get(&self, profile_id:i32, key: &str) -> Option<String> {
+        let gis = self.request(POST, "/call/Profile.Data.Get", json!({
+            "profileId":profile_id,
+            "key":key
+        }).to_string()).expect("Couldn't get profile data value");
+        let gres : GetRes = pres(gis).unwrap();
+        gres.value
+    }
     /// Removes a profile's saved info. Also removes it from profile_list. Returns true if
     /// successful.
     pub fn profile_forget(&self, profile_id: i32) -> bool {

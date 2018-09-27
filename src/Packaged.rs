@@ -80,3 +80,8 @@ pub struct FetchPCol {
 pub struct SearchUsers {
     pub users : Option<Vec<User>>
 }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GetRes {
+    pub value: Option<String>,
+    pub ok: Option<bool>
+}
