@@ -149,3 +149,23 @@ fn check_updates() {
         but.check_update(vec!["e97cd944-386d-4c6c-b1e9-76a3175f4ca9".to_string()]);
     });
 }
+#[test]
+fn expireall() {
+    b.with(|but| {
+        but.expireall();
+    });
+}
+#[test]
+fn set_offline() {
+    b.with(|but| {
+        but.set_offline(true);
+        but.set_offline(false);
+    });
+}
+#[test]
+fn set_throttle() {
+    b.with(|but| {
+        but.set_throttle(true, 10);
+        but.set_throttle(false, 0);
+    });
+}

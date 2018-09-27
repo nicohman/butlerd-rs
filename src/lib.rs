@@ -435,6 +435,14 @@ impl Butler {
         let request = builder.body(hyper::Body::empty()).unwrap();
         let _res = self.hclient.request(request);
     }
+    /// Sets a throttle for how much bandwith butler can use. If enabled is false, disables any
+    /// previous set throttles. Rate is measured in kbps
+    pub fn set_throttle(&self, enabled:bool, rate: i64) {
+        self.request(POST, "/call/Network.SetBandwidthThrottle", json!({
+            "enabled":enabled,
+            "rate":rate
+        }).to_string()).expect("Couldn't set throttle");
+    }
     /// Fetches the best available sale for a game(if such a sale exists)
     pub fn fetch_sale(&self, game_id: i32) -> Option<Sale> {
         let sls =
