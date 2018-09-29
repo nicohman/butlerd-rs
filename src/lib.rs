@@ -244,6 +244,21 @@ impl Butler {
                 "value":value
             }).to_string()).expect("Couldn't put profile data");
     }
+    /// Searches for folders possible to clean
+    pub fn clean_search(&self, roots: Vec<String>, whitelist:Vec<String>) -> Option<Vec<CleanDownloadsEntry>> {
+        let cis = self.request(POST, "/call/CleanDownloads.Search", json!({
+            "roots":roots,
+            "whitelist":whitelist
+        }).to_string()).expect("Couldn't search for folders to clean");
+        let res : CSRes = pres(cis).unwrap();
+        res.entries
+    }
+    /// Cleans specified CleanDownloadsEntries
+    pub fn clean_apply(&self, entries: Vec<CleanDownloadsEntry>){
+        self.request(POST, "/call/CleanDownloads.Apply", json!({
+            "entries":entries
+        }).to_string()).expect("Couldn't apply downloads clean");
+    }  
     /// Gets a specific profile info value
     pub fn profile_get(&self, profile_id:i32, key: &str) -> Option<String> {
         let gis = self.request(POST, "/call/Profile.Data.Get", json!({

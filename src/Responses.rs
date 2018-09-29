@@ -351,3 +351,8 @@ pub struct FsInfo {
     pub free_size : i64,
     pub total_size : i64
 }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CleanDownloadsEntry {
+    pub path: String,
+    pub size: i64
+}

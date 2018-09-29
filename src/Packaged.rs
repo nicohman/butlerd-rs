@@ -85,3 +85,7 @@ pub struct GetRes {
     pub value: Option<String>,
     pub ok: Option<bool>
 }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CSRes {
+    pub entries: Option<Vec<CleanDownloadsEntry>>
+}
