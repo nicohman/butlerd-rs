@@ -1,6 +1,6 @@
 [package]
 name = "butlerd"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["nicohman <nicohman@demenses.net>"]
 description = "A crate for using the butlerd API"
 repository = "https://github.com/nicohman/butlerd-rs"
