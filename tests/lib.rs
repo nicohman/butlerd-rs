@@ -9,7 +9,7 @@ static OS_STR: &str = "macos";
 static OS_STR: &str = "linux";
 #[cfg(target_os = "windows")]
 static OS_STR: &str = "windows";
-thread_local!(static b : Butler = Butler::new());
+thread_local!(static b : Butler = Butler::new().unwrap());
 const SSN_ID: i32 = 248620;
 const SOL_H: i32 = 283483;
 const LOCALH : i32 = 167215;
@@ -85,7 +85,7 @@ fn fetch_version() {
 #[test]
 #[ignore]
 fn install() {
-    let but = Butler::new();
+    let but = Butler::new().unwrap();
     let game = but.fetch_game(SOL_H);
     let install_id = &but.get_install_locations()[0];
     let mut uploads = but.fetch_uploads(SOL_H, true);

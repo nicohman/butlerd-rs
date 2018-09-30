@@ -13,6 +13,7 @@ use reqwest::Method;
 use serde::de::DeserializeOwned;
 use std::env;
 use std::io::Read;
+use std::result::Result::*;
 mod Packaged;
 pub mod Responses;
 use hyper::Client;
@@ -51,7 +52,7 @@ pub struct Butler {
 }
 impl Butler {
     /// Initializes a new butlerd instance. It will close when your program does.
-    pub fn new() -> Butler {
+    pub fn new() -> Result<Butler, String> {
         let log_path = &(LOG_PATH_PRE.to_string() + &rand::random::<f64>().to_string() + ".log");
         let mut file: fs::File;
         if fs::remove_file(log_path).is_ok() {
@@ -115,9 +116,8 @@ impl Butler {
                     done = true;
                 }
             } else {
-                ::std::thread::sleep_ms(500);
                 fs::remove_file(log_path).expect("Couldn't remove log file early");
-                return Butler::new();
+                return Err("Couldn't get butler startup".to_string());
                 // break;
             }
         }
@@ -134,7 +134,7 @@ impl Butler {
             let built = client.build().unwrap();
             let builtl = client_launch.build().unwrap();
             fs::remove_file(log_path).expect("Couldn't remove log file");
-            Butler {
+            Ok(Butler {
                 secret: secret,
                 address: pmeta.http[&"address".to_string()]
                     .to_string()
@@ -143,9 +143,9 @@ impl Butler {
                 pre_dir: PRE_PATH.to_string().replace("~", &get_home()),
                 client_launch: builtl,
                 hclient: Client::new(),
-            }
+            })
         } else {
-            panic!("Couldn't start butler");
+            Err("Couldn't start butler".to_string())
         }
     }
     ///Shuts down butler daemon.
@@ -706,7 +706,6 @@ impl Butler {
             b = serde_json::to_string(&mp(body)).unwrap();
         }
         let ris = self.request(POST, url, b).unwrap();
-        println!("{}", ris);
         let res = pres(ris);
         res
     }
