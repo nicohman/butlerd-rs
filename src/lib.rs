@@ -14,13 +14,11 @@ use serde::de::DeserializeOwned;
 use std::env;
 use std::io::Read;
 use std::result::Result::*;
-mod Packaged;
 pub mod Responses;
 use hyper::Client;
 use serde_json::value::Map;
 use std::collections::HashMap;
 use std::fs;
-use Packaged::*;
 use Responses::*;
 #[cfg(target_os = "macos")]
 static DB_PATH: &str = "";
