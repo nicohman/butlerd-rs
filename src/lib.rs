@@ -8,6 +8,8 @@ extern crate hyper;
 extern crate rand;
 extern crate regex;
 extern crate serde;
+#[macro_use]
+extern crate serde_struct_wrapper;
 use regex::Regex;
 use reqwest::Method;
 use serde::de::DeserializeOwned;
@@ -190,15 +192,15 @@ impl Butler {
         caves.items
     }
     ///Fetches specific game by id
-    pub fn fetch_game(&self, game_id: i32) -> Game {
+    pub fn fetch_game(&self, game_id: i32) -> Result<Game, BError> {
         let gvs =
             self.request(
                 POST,
                 "/call/Fetch.Game",
                 json!({ "gameId": game_id }).to_string(),
             ).expect("Couldn't fetch game by id");
-        let game: FetchGame = pres(gvs).unwrap();
-        game.game
+        let game  = pres(gvs).unwrap();
+        game
     }
     ///Fetches specific cave by id
     pub fn fetch_cave(&self, cave_id: &str) -> Cave {
@@ -287,15 +289,15 @@ impl Butler {
         }).to_string()).expect("Couldn't snooze cave");
     }
     /// Logs into a profile using saved credentials
-    pub fn login_saved(&self, profile_id: i32) -> Profile {
+    pub fn login_saved(&self, profile_id: i32) -> Result<Profile, BError> {
         let pis =
             self.request(
                 POST,
                 "/call/Profile.UseSavedLogin",
                 json!({ "profileId": profile_id }).to_string(),
             ).expect("Couldn't login using saved credentials");
-        let profile: FetchProfile = pres(pis).unwrap();
-        profile.profile
+        let profile: Result<Profile, BError> = pres(pis);
+        return profile;
     }
     /// Given an API key, logs into a profile and returns profile.
     pub fn login_api_key(&self, api_key: &str) -> Profile {
@@ -641,9 +643,7 @@ impl Butler {
         let stf = inf.staging_folder.clone();
         self.download_queue(inf);
         self.downloads_drive();
-        println!("Downloads drive successful");
         self.install_perform(&id, &stf);
-        println!("Install perform successful");
     }
     /// Fetches a vec of Downloads from the queue, returning None if none are available
     pub fn downloads_list(&self) -> Option<Vec<Download>> {
@@ -695,7 +695,7 @@ impl Butler {
             json!({ "caveId": cave_id }).to_string(),
         ).expect("Couldn't uninstall cave");
     }
-    fn res_req<T>(&self, url: &str, body: Vec<(&str, &str)>) -> Option<T>
+    fn res_req<T>(&self, url: &str, body: Vec<(&str, &str)>) -> Result<T, BError>
     where
         T: DeserializeOwned,
     {
@@ -723,12 +723,24 @@ fn dr_str(r: DownloadReason) -> String {
     }.to_string()
 }
 /// A helper function to interpet a common result response from butler. Took far too long to write.
-fn pres<T>(st: String) -> Option<T>
+fn pres<T>(st: String) -> Result<T, BError>
 where
     T: DeserializeOwned,
 {
-    let res: ResponseRes = serde_json::from_str(&st).unwrap();
-    return Some(serde_json::from_str(&serde_json::to_string(&res.result).unwrap()).unwrap());
+    let res: Result<ResponseRes, serde_json::Error> = serde_json::from_str(&st);
+    if res.is_ok() {
+        return Ok(serde_json::from_str(&serde_json::to_string(&res.unwrap().result).unwrap()).unwrap());
+    } else {
+        let err : Result<ResponseErr, serde_json::Error> = serde_json::from_str(&st);
+        if err.is_ok() {
+            return Err(err.unwrap().error);
+        } else {
+            return Err(BError {
+                message:st,
+                code:-1
+            });
+        }
+    }
 }
 /// A helper function to create a map easily for use with res_req
 fn mp(data: Vec<(&str, &str)>) -> HashMap<String, String> {

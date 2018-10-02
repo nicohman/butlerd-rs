@@ -89,3 +89,8 @@ pub struct GetRes {
 pub struct CSRes {
     pub entries: Option<Vec<CleanDownloadsEntry>>
 }
+#[derive(Serialize, Deserialize, Debug)]
+pub enum ResBase {
+    ResponseRes,
+    ResponseErr
+}

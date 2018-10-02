@@ -12,6 +12,7 @@ pub struct BStart {
 }
 ///Game Information
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(remote = "Self")]
 pub struct Game {
     pub id: i32,
     pub url: String,
@@ -37,7 +38,7 @@ pub struct Game {
     pub purchasesCount: Option<i32>,
     pub published: Option<bool>,
 }
-
+serde_with_root!("game":Game);
 /// A Game that the logged-in user's profile owns
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProfileGame {
@@ -157,6 +158,13 @@ pub struct Dates {
     pub createdAt: String,
     #[serde(default)]
     pub updatedAt: String,
+}
+/// The base struct for responses with errors
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ResponseErr {
+    #[serde(flatten)]    
+    pub response: Response,
+    pub error: BError
 }
 /// The base struct for responses with results
 #[derive(Serialize, Deserialize, Debug)]
@@ -345,14 +353,22 @@ pub struct CollectionGame {
     #[serde(flatten)]
     pub dates: Dates,
 }
+/// Information on a filesystem. Returned by statfs
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct FsInfo {
     pub free_size : i64,
     pub total_size : i64
 }
+/// Describes a directory that butler could clean up
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CleanDownloadsEntry {
     pub path: String,
     pub size: i64
+}
+/// An error returned by butler
+#[derive(Serialize, Deserialize, Debug)] 
+pub struct BError {
+    pub code: i64,
+    pub message: String
 }
