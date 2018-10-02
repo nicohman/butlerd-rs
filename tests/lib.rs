@@ -17,6 +17,7 @@ const LOCALH : i32 = 167215;
 fn fetchall() {
     b.with(|but| {
         let games = but.fetchall();
+        println!("{:?}", games);
     });
 }
 #[test]
@@ -30,7 +31,7 @@ fn fetch_game() {
 #[test]
 fn fetch_cave() {
     b.with(|but| {
-        let cave = but.fetch_cave("e97cd944-386d-4c6c-b1e9-76a3175f4ca9");
+        let cave = but.fetch_cave("e97cd944-386d-4c6c-b1e9-76a3175f4ca9").unwrap();
         assert_eq!("LOCALHOST", &cave.game.title);
         assert_eq!(LOCALH, cave.game.id);
     });
@@ -62,14 +63,14 @@ fn check_sale_none() {
 #[test]
 fn get_install_locations() {
     b.with(|but| {
-        let locations = but.get_install_locations();
+        let locations = but.get_install_locations().unwrap();
         assert!(locations.len() > 0);
     });
 }
 #[test]
 fn fetch_uploads() {
     b.with(|but| {
-        let uploads = but.fetch_uploads(SOL_H, true);
+        let uploads = but.fetch_uploads(SOL_H, true).unwrap();
         println!("{:?}", uploads);
         assert!(uploads.len() > 0);
     });
@@ -87,8 +88,8 @@ fn fetch_version() {
 fn install() {
     let but = Butler::new().unwrap();
     let game = but.fetch_game(SOL_H).unwrap();
-    let install_id = &but.get_install_locations()[0];
-    let mut uploads = but.fetch_uploads(SOL_H, true);
+    let install_id = &but.get_install_locations().unwrap()[0];
+    let mut uploads = but.fetch_uploads(SOL_H, true).unwrap();
     uploads = uploads
         .into_iter()
         .filter(|x| x.supports(OS_STR))
@@ -108,7 +109,7 @@ fn test_login_fetch_keys () {
     b.with(|but| {
         let username = env::var_os("ITCH_USERNAME").unwrap().into_string().unwrap();
         let password = env::var_os("ITCH_PASSWORD").unwrap().into_string().unwrap();
-        let profile = but.login_password(&username, &password);
+        let profile = but.login_password(&username, &password).unwrap();
         let keys = but.fetch_profile_keys(profile.profile.id, true);
         println!("{:?}", keys);
     });
@@ -123,12 +124,13 @@ fn commons() {
 #[test]
 fn pin() {
     b.with(|but| {
-        let caves = but.fetchall();
+        let caves = but.fetchall().unwrap();
         but.pin_cave(&caves[0].id.clone(), true);
         but.pin_cave(&caves[0].id.clone(), false);
     });
 }
 #[test]
+#[ignore]
 fn install_location_add() {
     b.with(|but| {
         if fs::metadata("/tmp/butlertest").is_err() {

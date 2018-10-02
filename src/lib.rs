@@ -41,36 +41,6 @@ static PRE_PATH: &str = "~/.config/itch/prereqs";
 #[cfg(target_os = "windows")]
 static PRE_PATH: &str = "";
 const POST: Method = Method::POST;
-macro_rules! parse_r {
-    ($str: expr, $type: ident, $prop: expr) => {
-        {
-        let response : Result<ResponseRes,serde_json::Error> = serde_json::from_str(&$str);
-        if response.is_ok() {
-            let result = response.unwrap().result;
-            if result.contains_key($prop) {
-                let finish : $type = serde_json::from_str(&serde_json::to_string(&result[$prop]).unwrap()).unwrap();
-                return Ok(finish);
-            } else {
-                return Err(BError {
-                    message: "Not Found".to_string(),
-                    code: -2
-                });
-            }
-        } else {
-            let err : Result<ResponseErr, serde_json::Error> = serde_json::from_str(&$str);
-            if err.is_ok() {
-                return Err(err.unwrap().error);
-            } else {
-                        return Err(BError {
-                message: $str,
-                code: -1,
-            });
-            }
-        }
-
-        }
-    };
-}
 /// Represents a connection to a butlerd instance
 pub struct Butler {
     secret: String,
@@ -214,9 +184,9 @@ impl Butler {
         self.make_request(method, path, params, "launch".to_string())
     }
     /// Fetchs all installed caves
-    pub fn fetchall(&self) -> Vec<Cave> {
-        let caves: FetchCaves = self.res_req("/call/Fetch.Caves", vec![]).unwrap();
-        caves.items
+    pub fn fetchall(&self) -> Result<Vec<Cave>, BError> {
+        self.res_preq("/call/Fetch.Caves", vec![], "items")
+
     }
     ///Fetches specific game by id
     pub fn fetch_game(&self, game_id: i32) -> Result<Game, BError> {
@@ -227,13 +197,11 @@ impl Butler {
                 "gameId": game_id
             }).to_string(),
         ).expect("Couldn't fetch game by id");
-        parse_r!(gvs, Game, "game")
+        parse_r(gvs, "game")
     }
     ///Fetches specific cave by id
-    pub fn fetch_cave(&self, cave_id: &str) -> Cave {
-        let cave: FetchCave = self.res_req("/call/Fetch.Cave", vec![("caveId", cave_id)])
-            .unwrap();
-        cave.cave
+    pub fn fetch_cave(&self, cave_id: &str) -> Result<Cave, BError> {
+        self.res_preq("/call/Fetch.Cave", vec![("caveId", cave_id)], "cave")
     }
     /// Makes a cave 'pinned' or not depending on pinned
     pub fn pin_cave(&self, cave_id: &str, pinned: bool) {
@@ -258,11 +226,8 @@ impl Butler {
         ).expect("Couldn't launch game");
     }
     /// Lists saved profiles
-    pub fn profile_list(&self) -> Vec<Profile> {
-        let profiles: FetchProfiles = self.res_req("/call/Profile.List", vec![]).expect(
-            "Couldn't list saved profiles",
-        );
-        profiles.profiles
+    pub fn profile_list(&self) -> Result<Vec<Profile>, BError> {
+        self.res_preq("/call/Profile.List", vec![], "profiles")
     }
     /// Sets a specific profile info value
     pub fn profile_put(&self, profile_id: i32, key: &str, value: &str) {
@@ -281,7 +246,7 @@ impl Butler {
         &self,
         roots: Vec<String>,
         whitelist: Vec<String>,
-    ) -> Option<Vec<CleanDownloadsEntry>> {
+    ) -> Result<Vec<CleanDownloadsEntry>, BError> {
         let cis = self.request(
             POST,
             "/call/CleanDownloads.Search",
@@ -290,8 +255,7 @@ impl Butler {
             "whitelist":whitelist
         }).to_string(),
         ).expect("Couldn't search for folders to clean");
-        let res: CSRes = pres(cis).unwrap();
-        res.entries
+        parse_r(cis, "entries")
     }
     /// Cleans specified CleanDownloadsEntries
     pub fn clean_apply(&self, entries: Vec<CleanDownloadsEntry>) {
@@ -304,7 +268,7 @@ impl Butler {
         ).expect("Couldn't apply downloads clean");
     }
     /// Gets a specific profile info value
-    pub fn profile_get(&self, profile_id: i32, key: &str) -> Option<String> {
+    pub fn profile_get(&self, profile_id: i32, key: &str) -> Result<String, BError> {
         let gis = self.request(
             POST,
             "/call/Profile.Data.Get",
@@ -313,19 +277,17 @@ impl Butler {
             "key":key
         }).to_string(),
         ).expect("Couldn't get profile data value");
-        let gres: GetRes = pres(gis).unwrap();
-        gres.value
+        parse_r(gis, "value")
     }
     /// Removes a profile's saved info. Also removes it from profile_list. Returns true if
     /// successful.
-    pub fn profile_forget(&self, profile_id: i32) -> bool {
+    pub fn profile_forget(&self, profile_id: i32) -> Result<bool, BError> {
         let sis = self.request(
             POST,
             "/call/Profile.Forget",
             json!({ "profileId": profile_id }).to_string(),
         ).expect("Couldn't forget profile");
-        let suc: Success = pres(sis).unwrap();
-        suc.success
+        parse_r(sis, "success")
     }
     /// Disables updates for a cave
     pub fn snooze_cave(&self, cave_id: &str) {
@@ -344,34 +306,30 @@ impl Butler {
             "/call/Profile.UseSavedLogin",
             json!({ "profileId": profile_id }).to_string(),
         ).expect("Couldn't login using saved credentials");
-        let profile: Result<Profile, BError> = pres(pis);
-        return profile;
+        parse_r(pis, "profile")
     }
     /// Given an API key, logs into a profile and returns profile.
-    pub fn login_api_key(&self, api_key: &str) -> Profile {
-        let profile: FetchProfile =
-            self.res_req("/call/Profile.LoginWithAPIKey", vec![("apiKey", api_key)])
-                .unwrap();
-        profile.profile
+    pub fn login_api_key(&self, api_key: &str) -> Result<Profile, BError> {
+        self.res_preq(
+            "/call/Profile.LoginWithAPIKey",
+            vec![("apiKey", api_key)],
+            "profile",
+        )
     }
     /// Given an username and password, logs into a profile and returns profile and cookie. May
     /// fail if a captcha or 2factor is required. Working on fix.
-    pub fn login_password(&self, username: &str, password: &str) -> PassLogRes {
-        let profile: PassLogRes = self.res_req(
+    pub fn login_password(&self, username: &str, password: &str) -> Result<PassLogRes, BError> {
+        self.res_req(
             "/call/Profile.LoginWithPassword",
             vec![("username", username), ("password", password)],
-        ).unwrap();
-        profile
+        ).unwrap()
     }
     /// Fetches all common/cached items and returns summaries
-    pub fn fetch_commons(&self) -> Commons {
-        let comm: Commons = self.res_req("/call/Fetch.Commons", vec![]).expect(
-            "Couldn't fetch commons",
-        );
-        comm
+    pub fn fetch_commons(&self) -> Result<Commons, BError> {
+        self.res_req("/call/Fetch.Commons", vec![])
     }
     /// Fetches a vec of games owned by a specific profile id
-    pub fn fetch_profile_games(&self, profile_id: i32) -> Vec<ProfileGame> {
+    pub fn fetch_profile_games(&self, profile_id: i32) -> Result<Vec<ProfileGame>, BError> {
         let pvs = self.request(
             POST,
             "/call/Fetch.ProfileGames",
@@ -379,8 +337,7 @@ impl Butler {
                 "profileId": profile_id,
             }).to_string(),
         ).expect("Couldn't fetch profile games");
-        let games: FetchPGames = pres(pvs).unwrap();
-        games.items
+        parse_r(pvs, "items")
     }
     /// Fetches download key
     pub fn fetch_download_key(
@@ -388,7 +345,7 @@ impl Butler {
         profile_id: i32,
         download_key_id: i32,
         fresh: bool,
-    ) -> DownloadKey {
+    ) -> Result<DownloadKey, BError> {
         let dis = self.request(
             POST,
             "/call/Fetch.DownloadKey",
@@ -398,11 +355,15 @@ impl Butler {
             "fresh":fresh
         }).to_string(),
         ).expect("Couldn't fetch download key");
-        let keys: FetchDKey = pres(dis).unwrap();
-        keys.downloadKey
+        parse_r(dis, "downloadKey")
     }
     /// Fetches collection info. Does not include games
-    pub fn fetch_collection(&self, profile_id: i32, collection_id: i32, fresh: bool) -> Collection {
+    pub fn fetch_collection(
+        &self,
+        profile_id: i32,
+        collection_id: i32,
+        fresh: bool,
+    ) -> Result<Collection, BError> {
         let cis = self.request(
             POST,
             "/call/Fetch.Collection",
@@ -412,15 +373,14 @@ impl Butler {
             "fresh":fresh
         }).to_string(),
         ).expect("Couldn't fetch collection");
-        let collection: FetchCollection = pres(cis).unwrap();
-        collection.collection
+        parse_r(cis, "collection")
     }
     /// Fetches all collections for a profile. Does not include games
     pub fn fetch_profile_collections(
         &self,
         profile_id: i32,
         fresh: bool,
-    ) -> Option<Vec<Collection>> {
+    ) -> Result<Vec<Collection>, BError> {
         let cis = self.request(
             POST,
             "/call/Fetch.Collection",
@@ -429,8 +389,7 @@ impl Butler {
             "fresh": fresh
         }).to_string(),
         ).expect("Couldn't fetch profile collections");
-        let collections: FetchPCol = pres(cis).unwrap();
-        collections.items
+        parse_r(cis, "items")
     }
     /// Fetches games in a collection
     pub fn fetch_collection_games(
@@ -438,7 +397,7 @@ impl Butler {
         profile_id: i32,
         collection_id: i32,
         fresh: bool,
-    ) -> Option<Vec<CollectionGame>> {
+    ) -> Result<Vec<CollectionGame>, BError> {
         let cis = self.request(
             POST,
             "/call/Fetch.Collection.Games",
@@ -448,12 +407,11 @@ impl Butler {
             "fresh":fresh
         }).to_string(),
         ).expect("Couldn't fetch collection games");
-        let games: FetchCollectionGames = pres(cis).unwrap();
-        games.items
+        parse_r(cis, "items")
     }
     /// Fetches owned download keys for a profile. Pass fresh as true to force butler to refresh
     /// cache
-    pub fn fetch_profile_keys(&self, profile_id: i32, fresh: bool) -> Vec<DownloadKey> {
+    pub fn fetch_profile_keys(&self, profile_id: i32, fresh: bool) -> Result<Vec<DownloadKey>, BError> {
         let dis = self.request(
             POST,
             "/call/Fetch.ProfileOwnedKeys",
@@ -462,15 +420,14 @@ impl Butler {
             "fresh":fresh
         }).to_string(),
         ).expect("Couldn't fetch profile keys");
-        let keys: ProfileKeys = pres(dis).unwrap();
-        keys.items
-    }
+        parse_r(dis, "items")
+      }
     /// Marks all local data as 'stale' and outdated
     pub fn expireall(&self) {
         self.req_h("Fetch.ExpireAll");
     }
     /// Searches users
-    pub fn search_users(&self, profile_id: i32, query: &str) -> Option<Vec<User>> {
+    pub fn search_users(&self, profile_id: i32, query: &str) -> Result<Vec<User>, BError> {
         let uis = self.request(
             POST,
             "/call/Search.Users",
@@ -479,8 +436,7 @@ impl Butler {
             "query":query
         }).to_string(),
         ).expect("Couldn't search users");
-        let us: SearchUsers = pres(uis).unwrap();
-        us.users
+        parse_r(uis, "users")
     }
     fn req_h(&self, path: &str) {
         let uri = "http://".to_string() + &self.address + "/call/" + path;
@@ -505,7 +461,7 @@ impl Butler {
         ).expect("Couldn't set throttle");
     }
     /// Fetches the best available sale for a game(if such a sale exists)
-    pub fn fetch_sale(&self, game_id: i32) -> Option<Sale> {
+    pub fn fetch_sale(&self, game_id: i32) -> Result<Sale, BError> {
         let sls = self.request(
             POST,
             "/call/Fetch.Sale",
@@ -513,24 +469,19 @@ impl Butler {
                 "gameId": game_id,
             }).to_string(),
         ).expect("Couldn't fetch sale");
-        let sale: FetchSale = pres(sls).unwrap();
-        sale.sale
+        parse_r(sls, "sale")
     }
     /// Gets all configured butler install locations in a vec
-    pub fn get_install_locations(&self) -> Vec<InstallLocationSummary> {
-        let idirs: FetchIDirs = self.res_req("/call/Install.Locations.List", vec![])
-            .unwrap();
-        idirs.installLocations
+    pub fn get_install_locations(&self) -> Result<Vec<InstallLocationSummary>, BError> {
+        self.res_preq("/call/Install.Locations.List", vec![], "installLocations")
     }
     /// Gets info on a filesystem
-    pub fn statfs(&self, path: &str) -> FsInfo {
-        let res: FsInfo = self.res_req("/call/System.StatFS", vec![("path", path)])
-            .unwrap();
-        res
+    pub fn statfs(&self, path: &str) -> Result<FsInfo, BError> {
+        self.res_req("/call/System.StatFS", vec![("path", path)])
     }
     /// Checks if an update is available for a vec of Caves. If you pass an empty vec, all caves
     /// will be checked.
-    pub fn check_update(&self, cave_ids: Vec<String>) -> CheckUpdate {
+    pub fn check_update(&self, cave_ids: Vec<String>) -> Result<CheckUpdate, BError> {
         let cuis = self.request(
             POST,
             "/call/CheckUpdate",
@@ -539,14 +490,11 @@ impl Butler {
             "verbose":false
         }).to_string(),
         ).expect("Couldn't check updates");
-        let cu: CheckUpdate = pres(cuis).unwrap();
-        cu
+        pres(cuis)
     }
-    /// Cancels an install. Needs an id
-    pub fn install_cancel(&self, id: &str) -> bool {
-        let d: DidCancel = self.res_req("/call/Install.Cancel", vec![("id", id)])
-            .unwrap();
-        d.didCancel
+    /// Cancels an install. Needs an install id. Result is true if cancel succeeded
+    pub fn install_cancel(&self, id: &str) -> Result<bool, BError> {
+        self.res_preq("/call/Install.Cancel", vec![("id", id)], "didCancel")
     }
     /// Queues up a game installation
     pub fn install_queue(
@@ -555,7 +503,7 @@ impl Butler {
         install_location_id: &str,
         upload: Upload,
         reason: DownloadReason,
-    ) -> QueueResponse {
+    ) -> Result<QueueResponse, BError> {
         let req = InstallQueueReq {
             install_location_id: install_location_id.to_string(),
             reason: dr_str(reason),
@@ -566,8 +514,7 @@ impl Butler {
         let qis = self.request(POST, "/call/Install.Queue", rstr).expect(
             "Couldn't queue game for download",
         );
-        let queue: QueueResponse = pres(qis).unwrap();
-        return queue;
+        pres(qis)
     }
     /// Performs an Install. Download must be completed beforehand
     pub fn install_perform(&self, queue_id: &str, staging_folder: &str) {
@@ -580,7 +527,7 @@ impl Butler {
         ).expect("Couldn't perform install");
     }
     /// Fetches all uploads for a game
-    pub fn fetch_uploads(&self, game_id: i32, compatible: bool) -> Vec<Upload> {
+    pub fn fetch_uploads(&self, game_id: i32, compatible: bool) -> Result<Vec<Upload>, BError> {
         let uis = self.request(
             POST,
             "/call/Fetch.GameUploads",
@@ -590,8 +537,7 @@ impl Butler {
                 "fresh": true
             }).to_string(),
         ).expect("Couldn't fetch game uploads");
-        let uploads: FetchUploads = pres(uis).unwrap();
-        uploads.uploads
+        parse_r(uis, "uploads")
     }
     /// Queues a download to later be downloaded by downloads_drive
     pub fn download_queue(&self, i_queue: QueueResponse) {
@@ -618,16 +564,14 @@ impl Butler {
             ::std::thread::sleep_ms(1000);
             self.clear_completed();
             let ds = self.downloads_list();
-            if ds.is_none() {
+            if ds.is_err() {
                 done = true;
             }
         }
     }
     /// Cancels driving downloads. Returns bool indicating success.
-    pub fn cancel_download_drive(&self) -> bool {
-        let done: DidCancel = self.res_req("/call/Downloads.Drive.Cancel", vec![])
-            .expect("Couldn't cancel downloads driving");
-        done.didCancel
+    pub fn cancel_download_drive(&self) -> Result<bool, BError> {
+        self.res_preq("/call/Downloads.Drive.Cancel", vec![], "didCancel")
     }
     /// Forces butler's online/offline state. True is offline, False is online
     pub fn set_offline(&self, online: bool) {
@@ -664,11 +608,8 @@ impl Butler {
         ).expect("Couldn't retry download");
     }
     /// Gets butler version strings
-    pub fn get_version(&self) -> VersionInfo {
-        let version: VersionInfo = self.res_req("/call/Version.Get", vec![]).expect(
-            "Couldn't get version",
-        );
-        version
+    pub fn get_version(&self) -> Result<VersionInfo, BError> {
+        self.res_req("/call/Version.Get", vec![])
     }
     /// Clears all completed downloads from the queue
     pub fn clear_completed(&self) {
@@ -678,20 +619,20 @@ impl Butler {
     /// A helper function that performs all of the game installation/download steps for you.
     /// Recommended over doing installation yourself.
     pub fn install_game(&self, game: Game, install_location_id: &str, upload: Upload) {
-        let inf = self.install_queue(game, install_location_id, upload, DownloadReason::Install);
+        let inf = self.install_queue(game, install_location_id, upload, DownloadReason::Install)
+            .unwrap();
         let id = inf.id.clone();
         let stf = inf.staging_folder.clone();
         self.download_queue(inf);
         self.downloads_drive();
         self.install_perform(&id, &stf);
     }
-    /// Fetches a vec of Downloads from the queue, returning None if none are available
-    pub fn downloads_list(&self) -> Option<Vec<Download>> {
-        let down: DownList = self.res_req("/call/Downloads.List", vec![]).unwrap();
-        down.downloads
+    /// Fetches a vec of Downloads from the queue, returning a BError if none are available
+    pub fn downloads_list(&self) -> Result<Vec<Download>, BError> {
+        self.res_preq("/call/Downloads.List", vec![], "downloads")
     }
     /// Searches games for string. Requires profileid.
-    pub fn search_games(&self, profile_id: i32, query: &str) -> Option<Vec<Game>> {
+    pub fn search_games(&self, profile_id: i32, query: &str) -> Result<Vec<Game>, BError> {
         let gis = self.request(
             POST,
             "/call/Seach.Games",
@@ -700,8 +641,7 @@ impl Butler {
             "query":query
         }).to_string(),
         ).unwrap();
-        let games: GamesSearchRes = pres(gis).unwrap();
-        return games.games;
+        parse_r(gis, "games")
     }
     /// Adds a new install location
     pub fn install_location_add(&self, path: &str) {
@@ -720,11 +660,8 @@ impl Butler {
         ).expect("Couldn't remove install location");
     }
     /// Gets an install location from a previously fetched id
-    pub fn install_location_get_by_id(&self, id: &str) -> InstallLocationSummary {
-        let ils: InstallLocationSummary =
-            self.res_req("/call/Install.Locations.GetByID", vec![("id", id)])
-                .expect("Couldn't get install location");
-        ils
+    pub fn install_location_get_by_id(&self, id: &str) -> Result<InstallLocationSummary, BError> {
+        self.res_req("/call/Install.Locations.GetByID", vec![("id", id)])
     }
     /// Uninstalls a cave
     pub fn uninstall(&self, cave_id: &str) {
@@ -746,6 +683,20 @@ impl Butler {
         }
         let ris = self.request(POST, url, b).unwrap();
         let res = pres(ris);
+        res
+    }
+    fn res_preq<T>(&self, url: &str, body: Vec<(&str, &str)>, field: &str) -> Result<T, BError>
+    where
+        T: DeserializeOwned,
+    {
+        let mut b = String::new();
+        if body.len() < 1 {
+            b = "{}".to_string();
+        } else {
+            b = serde_json::to_string(&mp(body)).unwrap();
+        }
+        let ris = self.request(POST, url, b).unwrap();
+        let res = parse_r(ris, field);
         res
     }
 }
@@ -782,6 +733,36 @@ where
             });
         }
     }
+}
+fn parse_r<T>(st: String, prop: &str) -> Result<T, BError>
+where
+    T: DeserializeOwned,
+{
+    let response: Result<ResponseRes, serde_json::Error> = serde_json::from_str(&st);
+    if response.is_ok() {
+        let result = response.unwrap().result;
+        if result.contains_key(prop) {
+            let finish = serde_json::from_str(&serde_json::to_string(&result[prop]).unwrap())
+                .unwrap();
+            return Ok(finish);
+        } else {
+            return Err(BError {
+                message: "Not Found".to_string(),
+                code: -2,
+            });
+        }
+    } else {
+        let err: Result<ResponseErr, serde_json::Error> = serde_json::from_str(&st);
+        if err.is_ok() {
+            return Err(err.unwrap().error);
+        } else {
+            return Err(BError {
+                message: st,
+                code: -1,
+            });
+        }
+    }
+
 }
 /// A helper function to create a map easily for use with res_req
 fn mp(data: Vec<(&str, &str)>) -> HashMap<String, String> {
