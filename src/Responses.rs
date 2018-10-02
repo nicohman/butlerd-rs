@@ -12,7 +12,6 @@ pub struct BStart {
 }
 ///Game Information
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(remote = "Self")]
 pub struct Game {
     pub id: i32,
     pub url: String,
@@ -38,7 +37,6 @@ pub struct Game {
     pub purchasesCount: Option<i32>,
     pub published: Option<bool>,
 }
-serde_with_root!("game":Game);
 /// A Game that the logged-in user's profile owns
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProfileGame {
@@ -162,9 +160,9 @@ pub struct Dates {
 /// The base struct for responses with errors
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ResponseErr {
-    #[serde(flatten)]    
+    #[serde(flatten)]
     pub response: Response,
-    pub error: BError
+    pub error: BError,
 }
 /// The base struct for responses with results
 #[derive(Serialize, Deserialize, Debug)]
@@ -337,7 +335,7 @@ pub struct Collection {
     /// Presence depends on whether fetched with fetch_collection or fetch_collection_games
     pub collection_games: Option<Vec<CollectionGame>>,
     pub user_id: i32,
-    pub user: User
+    pub user: User,
 }
 /// Info on a game within a game collection
 #[derive(Serialize, Deserialize, Debug)]
@@ -357,18 +355,18 @@ pub struct CollectionGame {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct FsInfo {
-    pub free_size : i64,
-    pub total_size : i64
+    pub free_size: i64,
+    pub total_size: i64,
 }
 /// Describes a directory that butler could clean up
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CleanDownloadsEntry {
     pub path: String,
-    pub size: i64
+    pub size: i64,
 }
 /// An error returned by butler
-#[derive(Serialize, Deserialize, Debug)] 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct BError {
     pub code: i64,
-    pub message: String
+    pub message: String,
 }

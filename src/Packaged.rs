@@ -62,35 +62,35 @@ pub struct ProfileKeys {
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FetchDKey {
-    pub downloadKey: DownloadKey
+    pub downloadKey: DownloadKey,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FetchCollection {
-    pub collection: Collection
+    pub collection: Collection,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FetchCollectionGames {
-    pub items : Option<Vec<CollectionGame>>
+    pub items: Option<Vec<CollectionGame>>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FetchPCol {
-    pub items : Option<Vec<Collection>>
+    pub items: Option<Vec<Collection>>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SearchUsers {
-    pub users : Option<Vec<User>>
+    pub users: Option<Vec<User>>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GetRes {
     pub value: Option<String>,
-    pub ok: Option<bool>
+    pub ok: Option<bool>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CSRes {
-    pub entries: Option<Vec<CleanDownloadsEntry>>
+    pub entries: Option<Vec<CleanDownloadsEntry>>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ResBase {
     ResponseRes,
-    ResponseErr
+    ResponseErr,
 }

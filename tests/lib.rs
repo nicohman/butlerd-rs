@@ -22,7 +22,7 @@ fn fetchall() {
 #[test]
 fn fetch_game() {
     b.with(|but| {
-        let game = but.fetch_game(248620);
+        let game = but.fetch_game(248620).unwrap();
         assert_eq!("Subserial Network", &game.title);
         assert_eq!(248620, game.id);
     });
@@ -86,7 +86,7 @@ fn fetch_version() {
 #[ignore]
 fn install() {
     let but = Butler::new().unwrap();
-    let game = but.fetch_game(SOL_H);
+    let game = but.fetch_game(SOL_H).unwrap();
     let install_id = &but.get_install_locations()[0];
     let mut uploads = but.fetch_uploads(SOL_H, true);
     uploads = uploads
