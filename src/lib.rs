@@ -125,7 +125,17 @@ impl Butler {
             }
         }
         if done {
-            let secret = pmeta.secret.to_string();
+            let but = Butler::from_start(pmeta);
+            fs::remove_file(log_path).expect("Couldn't remove log file");
+            Ok(but)
+        } else {
+            Err("Couldn't start butler".to_string())
+        }
+    }
+    /// Builds a Butler from a startup message. Useful if you want to start the daemon yourself or
+    /// maintain your own daemon with multiple connections.
+    pub fn from_start(pmeta: BStart) -> Butler {
+         let secret = pmeta.secret.to_string();
             let mut headers = reqwest::header::HeaderMap::new();
             headers.insert("X-Secret", secret.parse().unwrap());
             headers.insert("X-ID", "0".parse().unwrap());
@@ -136,8 +146,7 @@ impl Butler {
             client_launch = client_launch.timeout(None);
             let built = client.build().unwrap();
             let builtl = client_launch.build().unwrap();
-            fs::remove_file(log_path).expect("Couldn't remove log file");
-            Ok(Butler {
+            Butler {
                 secret: secret,
                 address: pmeta.http[&"address".to_string()].to_string().replace(
                     "\"",
@@ -147,10 +156,7 @@ impl Butler {
                 pre_dir: PRE_PATH.to_string().replace("~", &get_home()),
                 client_launch: builtl,
                 hclient: Client::new(),
-            })
-        } else {
-            Err("Couldn't start butler".to_string())
-        }
+            }
     }
     ///Shuts down butler daemon.
     pub fn close(&self) {
