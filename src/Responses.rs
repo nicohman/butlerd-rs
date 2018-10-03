@@ -12,63 +12,67 @@ pub struct BStart {
 }
 ///Game Information
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Game {
     pub id: i32,
     pub url: String,
     pub title: String,
-    pub shortText: String,
-    pub coverUrl: String,
+    pub short_text: String,
+    pub cover_url: String,
     #[serde(default)]
-    pub stillCoverUrl: String,
+    pub still_cover_url: String,
     #[serde(flatten)]
     pub dates: Dates,
     #[serde(default)]
-    pub minPrice: i32,
-    pub canBeBought: bool,
+    pub min_price: i32,
+    pub can_be_bought: bool,
     #[serde(default)]
-    pub hasDemo: bool,
+    pub has_demo: bool,
     #[serde(default)]
-    pub inPressSystem: bool,
+    pub in_press_system: bool,
     pub user: Option<User>,
     pub sale: Option<Sale>,
-    pub userId: Option<i32>,
-    pub viewsCount: Option<i32>,
-    pub downloadsCount: Option<i32>,
-    pub purchasesCount: Option<i32>,
+    pub user_id: Option<i32>,
+    pub views_count: Option<i32>,
+    pub downloads_count: Option<i32>,
+    pub purchases_count: Option<i32>,
     pub published: Option<bool>,
 }
 /// A Game that the logged-in user's profile owns
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct ProfileGame {
     pub game: Game,
-    pub viewsCount: i32,
-    pub downloadsCount: i32,
-    pub purchasesCount: i32,
+    pub views_count: i32,
+    pub downloads_count: i32,
+    pub purchases_count: i32,
     pub published: bool,
 }
 /// A Profile gives more information about a user through its id, but requires login
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Profile {
     pub id: i32,
-    pub lastConnected: String,
+    pub last_connected: String,
     pub user: User,
 }
 ///A downloadable file. Has a build only if the game is wharf-enabled
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Upload {
     pub id: i32,
     pub storage: String,
     #[serde(default)]
     pub host: String,
     pub filename: String,
-    pub displayName: String,
+    pub display_name: String,
     pub size: i32,
     #[serde(default)]
-    pub channelName: String,
+    pub channel_name: String,
     //    #[serde(default)]
     //    pub build: Build,
     #[serde(default)]
-    pub buildId: i32,
+    pub build_id: i32,
     pub preorder: bool,
     pub demo: bool,
     #[serde(flatten)]
@@ -105,28 +109,30 @@ pub struct Platforms {
 }
 ///An itch user's basic public info
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: i32,
     pub username: String,
-    pub displayName: String,
+    pub display_name: String,
     /// Whether or not the user is a developer.
     pub developer: bool,
-    pub pressUser: bool,
+    pub press_user: bool,
     pub url: String,
-    pub coverUrl: String,
+    pub cover_url: String,
     #[serde(default)]
-    pub stillCoverUrl: String,
+    pub still_cover_url: String,
 }
 /// A specific build of a Game. Game must be wharf-enabled
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Build {
     pub id: i32,
-    pub parentBuildId: i32,
+    pub parent_build_id: i32,
     pub state: String,
     /// The version of the Game
     pub version: i32,
     #[serde(default)]
-    pub userVersion: String,
+    pub user_version: String,
     //  Todo
     //  pub files: BuildFiles[]
     /// The user that published the Build
@@ -151,11 +157,12 @@ pub struct Response {
 }
 /// The base struct for publish/update dates
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Dates {
     #[serde(default)]
-    pub createdAt: String,
+    pub created_at: String,
     #[serde(default)]
-    pub updatedAt: String,
+    pub updated_at: String,
 }
 /// The base struct for responses with errors
 #[derive(Serialize, Deserialize, Debug)]
@@ -173,30 +180,33 @@ pub struct ResponseRes {
 }
 /// A sale on a given Game
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Sale {
     pub id: i32,
-    pub gameId: i32,
+    pub game_id: i32,
     pub rate: i32,
     ///Can be negative due to [reverse sales](https://itch.io/updates/introducing-reverse-sales)
-    pub startDate: String,
-    pub endDate: String,
+    pub start_date: String,
+    pub end_date: String,
 }
 /// Info on a game install location
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct InstallLocationSummary {
     pub id: String,
     pub path: String,
-    pub sizeInfo: InstallLocationSizeInfo,
+    pub size_info: InstallLocationSizeInfo,
 }
 /// Info on storage usage for an install location
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct InstallLocationSizeInfo {
     /// Number of bytes used by currently installed games
-    pub installedSize: i64,
+    pub installed_size: i64,
     /// Negative if unknown
-    pub freeSize: i64,
+    pub free_size: i64,
     /// Negative if unknown
-    pub totalSize: i64,
+    pub total_size: i64,
 }
 /// The reason you gave to download a game
 #[derive(Serialize, Deserialize, Debug)]
@@ -247,16 +257,17 @@ pub struct Download {
     pub game: Game,
     pub upload: Upload,
     pub build: Option<Build>,
-    pub startedAt: String,
-    pub finishedAt: Option<String>,
-    pub stagingFolder: String,
+    pub started_at: String,
+    pub finished_at: Option<String>,
+    pub staging_folder: String,
 }
 /// Butler daemon version info
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct VersionInfo {
     pub version: String,
     /// More verbose version
-    pub versionString: String,
+    pub version_string: String,
 }
 /// What you get back when you check for updates. Each item in updates represents a different game
 #[derive(Serialize, Deserialize, Debug)]
@@ -266,8 +277,9 @@ pub struct CheckUpdate {
 }
 /// Information on an avavilable update for a game
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct GameUpdate {
-    pub caveId: String,
+    pub cave_id: String,
     pub game: Game,
     /// Whether or not this is a direct update within the same channel. See [here](http://docs.itch.ovh/butlerd/master/#/?id=gameupdate)
     pub direct: bool,
@@ -289,11 +301,12 @@ pub struct PassLogRes {
 }
 /// Representation of a download key for a purchased non-free game
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct DownloadKey {
     pub id: i64,
-    pub gameId: i32,
+    pub game_id: i32,
     pub game: Game,
-    pub ownerId: i64,
+    pub owner_id: i64,
     #[serde(flatten)]
     pub dates: Dates,
 }
