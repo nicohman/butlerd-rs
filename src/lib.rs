@@ -1,3 +1,10 @@
+//! # butlerd
+//! Interfaces with itch.io's [butlerd](https://github.com/itchio/butler).
+//! It provides methods for almost every API call that can be made.
+//! Right now, replying to events from butler isn't implemented yet. This means that you can't log
+//! in using an username/password if a captcha gets triggered or if a 2factor token is required.
+//! Currently working on fixing this, but I'm still not very certain as to how this should be
+//! implemented. Open to suggestions.
 extern crate reqwest;
 use std::process::Command;
 #[macro_use]

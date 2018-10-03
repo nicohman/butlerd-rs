@@ -377,7 +377,8 @@ pub struct CleanDownloadsEntry {
     pub path: String,
     pub size: i64,
 }
-/// An error returned by butler
+/// A generic error struct. If the code is -1 or -2, it was a problem on this crate's side.
+/// Otherwise, butler returned this in response to a request
 #[derive(Serialize, Deserialize, Debug)]
 pub struct BError {
     pub code: i64,
