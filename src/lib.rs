@@ -147,7 +147,7 @@ impl Butler {
     }
     ///Shuts down butler daemon.
     pub fn close(&self) {
-        self.request(POST, "/Meta.Shutdown", "{}".to_string())
+        self.request( "/Meta.Shutdown", "{}".to_string())
             .expect("Couldn't shut down butler daemon");;
     }
     fn make_request(
@@ -175,11 +175,11 @@ impl Butler {
             Err("Timed out".to_string())
         }
     }
-    fn request(&self, method: Method, path: &str, params: String) -> Result<String, String> {
-        self.make_request(method, path, params, "default".to_string())
+    fn request(&self, path: &str, params: String) -> Result<String, String> {
+        self.make_request(POST, path, params, "default".to_string())
     }
-    fn request_l(&self, method: Method, path: &str, params: String) -> Result<String, String> {
-        self.make_request(method, path, params, "launch".to_string())
+    fn request_l(&self, path: &str, params: String) -> Result<String, String> {
+        self.make_request(POST, path, params, "launch".to_string())
     }
     /// Fetchs all installed caves
     pub fn fetchall(&self) -> Result<Vec<Cave>, BError> {
@@ -189,7 +189,6 @@ impl Butler {
     ///Fetches specific game by id
     pub fn fetch_game(&self, game_id: i32) -> Result<Game, BError> {
         let gvs = self.request(
-            POST,
             "/call/Fetch.Game",
             json!({
                 "gameId": game_id
@@ -204,7 +203,6 @@ impl Butler {
     /// Makes a cave 'pinned' or not depending on pinned
     pub fn pin_cave(&self, cave_id: &str, pinned: bool) {
         self.request(
-            POST,
             "/call/Caves.SetPinned",
             json!({
             "caveId":cave_id,
@@ -215,7 +213,6 @@ impl Butler {
     /// Launches game by CaveID. Note that this will not complete until the game is closed.
     pub fn launch_game(&self, cave_id: &str) {
         self.request_l(
-            POST,
             "/call/Launch",
             json!({
                 "caveId": cave_id,
@@ -230,7 +227,6 @@ impl Butler {
     /// Sets a specific profile info value
     pub fn profile_put(&self, profile_id: i32, key: &str, value: &str) {
         self.request(
-            POST,
             "/call/Profile.Data.Put",
             json!({
                 "profileId":profile_id,
@@ -246,7 +242,6 @@ impl Butler {
         whitelist: Vec<String>,
     ) -> Result<Vec<CleanDownloadsEntry>, BError> {
         let cis = self.request(
-            POST,
             "/call/CleanDownloads.Search",
             json!({
             "roots":roots,
@@ -258,7 +253,6 @@ impl Butler {
     /// Cleans specified CleanDownloadsEntries
     pub fn clean_apply(&self, entries: Vec<CleanDownloadsEntry>) {
         self.request(
-            POST,
             "/call/CleanDownloads.Apply",
             json!({
             "entries":entries
@@ -268,7 +262,6 @@ impl Butler {
     /// Gets a specific profile info value
     pub fn profile_get(&self, profile_id: i32, key: &str) -> Result<String, BError> {
         let gis = self.request(
-            POST,
             "/call/Profile.Data.Get",
             json!({
             "profileId":profile_id,
@@ -281,7 +274,6 @@ impl Butler {
     /// successful.
     pub fn profile_forget(&self, profile_id: i32) -> Result<bool, BError> {
         let sis = self.request(
-            POST,
             "/call/Profile.Forget",
             json!({ "profileId": profile_id }).to_string(),
         ).expect("Couldn't forget profile");
@@ -290,7 +282,6 @@ impl Butler {
     /// Disables updates for a cave
     pub fn snooze_cave(&self, cave_id: &str) {
         self.request(
-            POST,
             "/call/Snooze.Cave",
             json!({
             "caveId":cave_id
@@ -300,7 +291,6 @@ impl Butler {
     /// Logs into a profile using saved credentials
     pub fn login_saved(&self, profile_id: i32) -> Result<Profile, BError> {
         let pis = self.request(
-            POST,
             "/call/Profile.UseSavedLogin",
             json!({ "profileId": profile_id }).to_string(),
         ).expect("Couldn't login using saved credentials");
@@ -329,7 +319,6 @@ impl Butler {
     /// Fetches a vec of games owned by a specific profile id
     pub fn fetch_profile_games(&self, profile_id: i32) -> Result<Vec<ProfileGame>, BError> {
         let pvs = self.request(
-            POST,
             "/call/Fetch.ProfileGames",
             json!({
                 "profileId": profile_id,
@@ -345,7 +334,6 @@ impl Butler {
         fresh: bool,
     ) -> Result<DownloadKey, BError> {
         let dis = self.request(
-            POST,
             "/call/Fetch.DownloadKey",
             json!({
             "profileId": profile_id,
@@ -363,7 +351,6 @@ impl Butler {
         fresh: bool,
     ) -> Result<Collection, BError> {
         let cis = self.request(
-            POST,
             "/call/Fetch.Collection",
             json!({
             "profileId":profile_id,
@@ -380,7 +367,6 @@ impl Butler {
         fresh: bool,
     ) -> Result<Vec<Collection>, BError> {
         let cis = self.request(
-            POST,
             "/call/Fetch.Collection",
             json!({
             "profileId": profile_id,
@@ -397,7 +383,6 @@ impl Butler {
         fresh: bool,
     ) -> Result<Vec<CollectionGame>, BError> {
         let cis = self.request(
-            POST,
             "/call/Fetch.Collection.Games",
             json!({
             "profileId": profile_id,
@@ -411,7 +396,6 @@ impl Butler {
     /// cache
     pub fn fetch_profile_keys(&self, profile_id: i32, fresh: bool) -> Result<Vec<DownloadKey>, BError> {
         let dis = self.request(
-            POST,
             "/call/Fetch.ProfileOwnedKeys",
             json!({
             "profileId": profile_id,
@@ -427,7 +411,6 @@ impl Butler {
     /// Searches users
     pub fn search_users(&self, profile_id: i32, query: &str) -> Result<Vec<User>, BError> {
         let uis = self.request(
-            POST,
             "/call/Search.Users",
             json!({
             "profileId":profile_id,
@@ -450,7 +433,6 @@ impl Butler {
     /// previous set throttles. Rate is measured in kbps
     pub fn set_throttle(&self, enabled: bool, rate: i64) {
         self.request(
-            POST,
             "/call/Network.SetBandwidthThrottle",
             json!({
             "enabled":enabled,
@@ -461,7 +443,6 @@ impl Butler {
     /// Fetches the best available sale for a game(if such a sale exists)
     pub fn fetch_sale(&self, game_id: i32) -> Result<Sale, BError> {
         let sls = self.request(
-            POST,
             "/call/Fetch.Sale",
             json!({
                 "gameId": game_id,
@@ -481,7 +462,6 @@ impl Butler {
     /// will be checked.
     pub fn check_update(&self, cave_ids: Vec<String>) -> Result<CheckUpdate, BError> {
         let cuis = self.request(
-            POST,
             "/call/CheckUpdate",
             json!({
             "caveIds":cave_ids,
@@ -509,7 +489,7 @@ impl Butler {
             upload: upload,
         };
         let rstr = serde_json::to_string(&req).unwrap();
-        let qis = self.request(POST, "/call/Install.Queue", rstr).expect(
+        let qis = self.request( "/call/Install.Queue", rstr).expect(
             "Couldn't queue game for download",
         );
         pres(qis)
@@ -517,7 +497,6 @@ impl Butler {
     /// Performs an Install. Download must be completed beforehand
     pub fn install_perform(&self, queue_id: &str, staging_folder: &str) {
         self.request(
-            POST,
             "/call/Install.Perform",
             json!({
                 "id":queue_id,
@@ -527,7 +506,6 @@ impl Butler {
     /// Fetches all uploads for a game
     pub fn fetch_uploads(&self, game_id: i32, compatible: bool) -> Result<Vec<Upload>, BError> {
         let uis = self.request(
-            POST,
             "/call/Fetch.GameUploads",
             json!({
                 "gameId": game_id,
@@ -540,7 +518,6 @@ impl Butler {
     /// Queues a download to later be downloaded by downloads_drive
     pub fn download_queue(&self, i_queue: QueueResponse) {
         self.request(
-            POST,
             "/call/Downloads.Queue",
             json!({
                 "item": serde_json::to_string(&i_queue).unwrap()
@@ -574,7 +551,6 @@ impl Butler {
     /// Forces butler's online/offline state. True is offline, False is online
     pub fn set_offline(&self, online: bool) {
         self.request(
-            POST,
             "/call/Network.SetSimulateOffline",
             json!({
             "enabled":online
@@ -584,7 +560,6 @@ impl Butler {
     /// Discards one download
     pub fn discard_download(&self, download_id: &str) {
         self.request(
-            POST,
             "/call/Downloads.Discard",
             json!({ "downloadId": download_id }).to_string(),
         ).expect("Couldn't discard download");
@@ -592,7 +567,6 @@ impl Butler {
     /// Prioritizes by download id
     pub fn prioritize_download(&self, download_id: &str) {
         self.request(
-            POST,
             "/call/Downloads.Prioritize",
             json!({ "downloadId": download_id }).to_string(),
         ).expect("Couldn't prioritize download");
@@ -600,7 +574,6 @@ impl Butler {
     /// Retries an errored download id
     pub fn download_retry(&self, download_id: &str) {
         self.request(
-            POST,
             "/call/Downloads.Retry",
             json!({ "downloadId": download_id }).to_string(),
         ).expect("Couldn't retry download");
@@ -611,7 +584,7 @@ impl Butler {
     }
     /// Clears all completed downloads from the queue
     pub fn clear_completed(&self) {
-        self.request(POST, "/call/Downloads.ClearFinished", "{}".to_string())
+        self.request( "/call/Downloads.ClearFinished", "{}".to_string())
             .expect("Couldn't clear completed donwloads");
     }
     /// A helper function that performs all of the game installation/download steps for you.
@@ -632,7 +605,6 @@ impl Butler {
     /// Searches games for string. Requires profileid.
     pub fn search_games(&self, profile_id: i32, query: &str) -> Result<Vec<Game>, BError> {
         let gis = self.request(
-            POST,
             "/call/Seach.Games",
             json!({
             "profileId":profile_id,
@@ -644,7 +616,6 @@ impl Butler {
     /// Adds a new install location
     pub fn install_location_add(&self, path: &str) {
         self.request(
-            POST,
             "/call/Install.Locations.Add",
             json!({ "path": path }).to_string(),
         ).expect("Couldn't add new install location");
@@ -652,7 +623,6 @@ impl Butler {
     /// Removes an install location
     pub fn install_location_remove(&self, id: &str) {
         self.request(
-            POST,
             "/call/Install.Locations.Remove",
             json!({ "id": id }).to_string(),
         ).expect("Couldn't remove install location");
@@ -664,7 +634,6 @@ impl Butler {
     /// Uninstalls a cave
     pub fn uninstall(&self, cave_id: &str) {
         self.request(
-            POST,
             "/call/Uninstall.Perform",
             json!({ "caveId": cave_id }).to_string(),
         ).expect("Couldn't uninstall cave");
@@ -679,7 +648,7 @@ impl Butler {
         } else {
             b = serde_json::to_string(&mp(body)).unwrap();
         }
-        let ris = self.request(POST, url, b).unwrap();
+        let ris = self.request( url, b).unwrap();
         let res = pres(ris);
         res
     }
@@ -693,7 +662,7 @@ impl Butler {
         } else {
             b = serde_json::to_string(&mp(body)).unwrap();
         }
-        let ris = self.request(POST, url, b).unwrap();
+        let ris = self.request(url, b).unwrap();
         let res = parse_r(ris, field);
         res
     }
