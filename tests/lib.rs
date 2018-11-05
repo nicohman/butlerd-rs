@@ -49,7 +49,7 @@ fn login_api_key() {
     b.with(|but| {
         let key = env::var_os("ITCH_API");
         if key.is_some() {
-            but.login_api_key(&key.unwrap().into_string().unwrap());
+            but.login_api_key(key.unwrap().into_string().unwrap());
         }
     });
 }
@@ -94,7 +94,7 @@ fn install() {
         .into_iter()
         .filter(|x| x.supports(OS_STR))
         .collect::<Vec<Upload>>();
-    but.install_game(game, &install_id.id.to_string(), uploads.pop().unwrap());
+    but.install_game(game, install_id.id.to_string(), uploads.pop().unwrap());
 }
 #[test]
 fn profile_list () {
@@ -109,7 +109,7 @@ fn test_login_fetch_keys () {
     b.with(|but| {
         let username = env::var_os("ITCH_USERNAME").unwrap().into_string().unwrap();
         let password = env::var_os("ITCH_PASSWORD").unwrap().into_string().unwrap();
-        let profile = but.login_password(&username, &password).unwrap();
+        let profile = but.login_password(username, password).unwrap();
         let keys = but.fetch_profile_keys(profile.profile.id, true);
         println!("{:?}", keys);
     });
@@ -125,8 +125,8 @@ fn commons() {
 fn pin() {
     b.with(|but| {
         let caves = but.fetchall().unwrap();
-        but.pin_cave(&caves[0].id.clone(), true);
-        but.pin_cave(&caves[0].id.clone(), false);
+        but.pin_cave(caves[0].id.clone(), true);
+        but.pin_cave(caves[0].id.clone(), false);
     });
 }
 #[test]
