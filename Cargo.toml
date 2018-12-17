@@ -3,7 +3,7 @@ name = "butlerd"
 version = "0.1.2"
 authors = ["nicohman <nicohman@demenses.net>"]
 description = "A crate for using the butlerd API"
-repository = "https://github.com/nicohman/butlerd-rs"
+repository = "https://git.sr.ht/~nicohman/butlerd-rs"
 license = "GPL-3.0"
 keywords = ["butler", "butlerd", "itch", "itchio"]
 [dependencies]
