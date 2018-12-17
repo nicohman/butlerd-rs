@@ -14,6 +14,8 @@ extern crate serde_json;
 extern crate hyper;
 extern crate rand;
 extern crate regex;
+#[macro_use]
+extern crate error_chain;
 extern crate serde;
 use regex::Regex;
 use reqwest::Method;
@@ -22,6 +24,9 @@ use std::env;
 use std::io::Read;
 use std::result::Result::*;
 pub mod Responses;
+pub mod error;
+use error::*;
+use ErrorKind::*;
 use hyper::Client;
 use serde_json::value::Map;
 use std::collections::HashMap;
@@ -46,7 +51,6 @@ static PRE_PATH: &str = "~/.config/itch/prereqs";
 #[cfg(target_os = "windows")]
 static PRE_PATH: &str = "%APPDATA%/itch/db/butler.db";
 const POST: Method = Method::POST;
-pub type Result<T> = ::std::result::Result<T, BError>;
 /// Represents a connection to a butlerd instance
 pub struct Butler {
     secret: String,
@@ -58,7 +62,7 @@ pub struct Butler {
 }
 impl Butler {
     /// Initializes a new butlerd instance. It will close when your program does.
-    pub fn new() -> ::std::result::Result<Butler, String> {
+    pub fn new() -> Result<Butler> {
         let mut db_proc = DB_PATH.replace("~", &get_home());
         let appdata = env::var("APPDATA");
         if appdata.is_ok() {
@@ -72,16 +76,16 @@ impl Butler {
         let log_path = &(log_path_proc + &rand::random::<f64>().to_string() + ".log");
         let mut file: fs::File;
         if fs::remove_file(log_path).is_ok() {
-            file = fs::File::create(log_path).unwrap();
+            file = fs::File::create(log_path)?;
         }
         if fs::metadata(log_path).is_ok() {
             if fs::remove_file(log_path).is_err() {
-                file = fs::File::create(log_path).unwrap();
+                file = fs::File::create(log_path)?;
             } else {
-                file = fs::File::open(log_path).unwrap();
+                file = fs::File::open(log_path)?;
             }
         } else {
-            file = fs::File::create(log_path).unwrap();
+            file = fs::File::create(log_path)?;
         }
         Command::new("sh")
             .arg("-c")
@@ -92,18 +96,15 @@ impl Butler {
                     + &::std::process::id().to_string(),
             )
             .stdout(file)
-            .spawn()
-            .expect("Couldn't start butler daemon");
+            .spawn()?;
         //TODO: REPLACE
         let mut finish = false;
         let mut bd: String = String::new();
         let reg = Regex::new(r"\{(?:.|\s)+\}").unwrap();
         while !finish {
             bd = String::new();
-            fs::File::open(log_path)
-                .unwrap()
-                .read_to_string(&mut bd)
-                .unwrap();
+            fs::File::open(log_path)?
+                .read_to_string(&mut bd)?;
             let res = reg.find(&bd);
             if res.is_some() {
                 finish = true;
@@ -130,17 +131,16 @@ impl Butler {
                     done = true;
                 }
             } else {
-                fs::remove_file(log_path).expect("Couldn't remove log file early");
-                return Err("Couldn't get butler startup".to_string());
-                // break;
+                fs::remove_file(log_path)?;
+                return Err(StartUpError("Couldn't get butler startup".to_string()).into());
             }
         }
         if done {
             let but = Butler::from_start(pmeta);
-            fs::remove_file(log_path).expect("Couldn't remove log file");
+            fs::remove_file(log_path)?;
             Ok(but)
         } else {
-            Err("Couldn't start butler".to_string())
+            Err(StartUpError("Couldn't start butler".to_string()).into())
         }
     }
     /// Builds a Butler from a startup message. Useful if you want to start the daemon yourself or
@@ -184,44 +184,29 @@ impl Butler {
         path: N,
         params: N,
         client: &str,
-    ) -> ::std::result::Result<String, String>
+    ) -> Result<String>
     where
         N: Into<String>,
     {
-        let res: ::std::result::Result<reqwest::Response, reqwest::Error>;
+        let client_use = match client {
+            "launch" => &self.client_launch,
+            _ => &self.client
+        };
         let url = "http://".to_string() + &self.address.clone() + &path.into();
-        if client == "launch" {
-            res = self
-                .client_launch
+            let mut res = client_use
                 .request(method.into(), &url)
                 .body(params.into())
-                .send();
-        } else {
-            res = self
-                .client
-                .request(method.into(), &url)
-                .body(params.into())
-                .send();
-        }
-        if res.is_ok() {
-            let mut res = res.unwrap();
-            if res.status().is_success() {
+                .send()?;
                 Ok(res.text().unwrap())
-            } else {
-                Err("No".to_string())
-            }
-        } else {
-            Err("Timed out".to_string())
-        }
     }
-    fn request<S, N>(&self, path: S, params: N) -> ::std::result::Result<String, String>
+    fn request<S, N>(&self, path: S, params: N) -> Result<String>
     where
         S: Into<String>,
         N: Into<String>,
     {
         self.make_request(POST, path.into(), params.into(), "default")
     }
-    fn request_l<S, N>(&self, path: S, params: N) -> ::std::result::Result<String, String>
+    fn request_l<S, N>(&self, path: S, params: N) -> Result<String>
     where
         S: Into<String>,
         N: Into<String>,
@@ -251,7 +236,7 @@ impl Butler {
         )
     }
     /// Makes a cave 'pinned' or not depending on pinned
-    pub fn pin_cave<N>(&self, cave_id: N, pinned: bool)
+    pub fn pin_cave<N>(&self, cave_id: N, pinned: bool) -> Result<()>
     where
         N: Into<String>,
     {
@@ -262,11 +247,11 @@ impl Butler {
             "pinned":pinned
         })
             .to_string(),
-        )
-        .expect("Couldn't pin cave");
+        )?;
+        Ok(())
     }
     /// Launches game by CaveID. Note that this will not complete until the game is closed.
-    pub fn launch_game<N>(&self, cave_id: N)
+    pub fn launch_game<N>(&self, cave_id: N) -> Result<()>
     where
         N: Into<String>,
     {
@@ -277,15 +262,15 @@ impl Butler {
                 "prereqsDir": self.pre_dir.clone()
             })
             .to_string(),
-        )
-        .expect("Couldn't launch game");
+        )?;
+        Ok(())
     }
     /// Lists saved profiles
     pub fn profile_list(&self) -> Result<Vec<Profile>> {
         self.res_preq("/call/Profile.List", vec![], "profiles")
     }
     /// Sets a specific profile info value
-    pub fn profile_put<N>(&self, profile_id: i32, key: N, value: N)
+    pub fn profile_put<N>(&self, profile_id: i32, key: N, value: N) -> Result<()>
     where
         N: Into<String>,
     {
@@ -297,8 +282,8 @@ impl Butler {
                 "value":value.into()
             })
             .to_string(),
-        )
-        .expect("Couldn't put profile data");
+        )?;
+        Ok(())
     }
     /// Searches for folders possible to clean
     pub fn clean_search(
@@ -314,17 +299,16 @@ impl Butler {
             "whitelist":whitelist
         })
                 .to_string(),
-            )
-            .expect("Couldn't search for folders to clean");
+            )?;
         parse_r(cis, "entries")
     }
     /// Cleans specified CleanDownloadsEntries
-    pub fn clean_apply(&self, entries: Vec<CleanDownloadsEntry>) {
+    pub fn clean_apply(&self, entries: Vec<CleanDownloadsEntry>) -> Result<()>{
         self.request(
             "/call/CleanDownloads.Apply",
             json!({ "entries": entries }).to_string(),
-        )
-        .expect("Couldn't apply downloads clean");
+        )?;
+        Ok(())
     }
     /// Gets a specific profile info value
     pub fn profile_get<N>(&self, profile_id: i32, key: N) -> Result<String>
@@ -339,8 +323,7 @@ impl Butler {
             "key":key.into()
         })
                 .to_string(),
-            )
-            .expect("Couldn't get profile data value");
+            )?;
         parse_r(gis, "value")
     }
     /// Removes a profile's saved info. Also removes it from profile_list. Returns true if
@@ -350,17 +333,16 @@ impl Butler {
             .request(
                 "/call/Profile.Forget",
                 json!({ "profileId": profile_id }).to_string(),
-            )
-            .expect("Couldn't forget profile");
+            )?;
         parse_r(sis, "success")
     }
     /// Disables updates for a cave
-    pub fn snooze_cave<N>(&self, cave_id: N) where N : Into<String> {
+    pub fn snooze_cave<N>(&self, cave_id: N)-> Result<()> where N : Into<String> {
         self.request(
             "/call/Snooze.Cave",
             json!({ "caveId": cave_id.into() }).to_string(),
-        )
-        .expect("Couldn't snooze cave");
+        )?;
+        Ok(())
     }
     /// Logs into a profile using saved credentials
     pub fn login_saved(&self, profile_id: i32) -> Result<Profile> {
@@ -368,8 +350,7 @@ impl Butler {
             .request(
                 "/call/Profile.UseSavedLogin",
                 json!({ "profileId": profile_id }).to_string(),
-            )
-            .expect("Couldn't login using saved credentials");
+            )?;
         parse_r(pis, "profile")
     }
     /// Given an API key, logs into a profile and returns profile.
@@ -389,14 +370,13 @@ impl Butler {
     where
         N: Into<String>,
     {
-        self.res_req(
+        Ok(self.res_req(
             "/call/Profile.LoginWithPassword",
             vec![
                 ("username", &username.into()),
                 ("password", &password.into()),
             ],
-        )
-        .unwrap()
+        )?)
     }
     /// Fetches all common/cached items and returns summaries
     pub fn fetch_commons(&self) -> Result<Commons> {
@@ -411,8 +391,7 @@ impl Butler {
                 "profileId": profile_id,
             })
                 .to_string(),
-            )
-            .expect("Couldn't fetch profile games");
+            )?;
         parse_r(pvs, "items")
     }
     /// Fetches download key
@@ -431,8 +410,7 @@ impl Butler {
             "fresh":fresh
         })
                 .to_string(),
-            )
-            .expect("Couldn't fetch download key");
+            )?;
         parse_r(dis, "downloadKey")
     }
     /// Fetches collection info. Does not include games
@@ -451,8 +429,7 @@ impl Butler {
             "fresh":fresh
         })
                 .to_string(),
-            )
-            .expect("Couldn't fetch collection");
+            )?;
         parse_r(cis, "collection")
     }
     /// Fetches all collections for a profile. Does not include games
@@ -469,8 +446,7 @@ impl Butler {
             "fresh": fresh
         })
                 .to_string(),
-            )
-            .expect("Couldn't fetch profile collections");
+            )?;
         parse_r(cis, "items")
     }
     /// Fetches games in a collection
@@ -489,8 +465,7 @@ impl Butler {
             "fresh":fresh
         })
                 .to_string(),
-            )
-            .expect("Couldn't fetch collection games");
+            )?;
         parse_r(cis, "items")
     }
     /// Fetches owned download keys for a profile. Pass fresh as true to force butler to refresh
@@ -508,8 +483,7 @@ impl Butler {
             "fresh":fresh
         })
                 .to_string(),
-            )
-            .expect("Couldn't fetch profile keys");
+            )?;
         parse_r(dis, "items")
     }
     /// Marks all local data as 'stale' and outdated
@@ -529,8 +503,7 @@ impl Butler {
             "query":query.into()
         })
                 .to_string(),
-            )
-            .expect("Couldn't search users");
+            )?;
         parse_r(uis, "users")
     }
     fn req_h<N>(&self, path: N)
@@ -548,7 +521,7 @@ impl Butler {
     }
     /// Sets a throttle for how much bandwith butler can use. If enabled is false, disables any
     /// previous set throttles. Rate is measured in kbps
-    pub fn set_throttle(&self, enabled: bool, rate: i64) {
+    pub fn set_throttle(&self, enabled: bool, rate: i64) -> Result<()> {
         self.request(
             "/call/Network.SetBandwidthThrottle",
             json!({
@@ -556,8 +529,8 @@ impl Butler {
             "rate":rate
         })
             .to_string(),
-        )
-        .expect("Couldn't set throttle");
+        )?;
+        Ok(())
     }
     /// Fetches the best available sale for a game(if such a sale exists)
     pub fn fetch_sale(&self, game_id: i32) -> Result<Sale> {
@@ -568,8 +541,7 @@ impl Butler {
                 "gameId": game_id,
             })
                 .to_string(),
-            )
-            .expect("Couldn't fetch sale");
+            )?;
         parse_r(sls, "sale")
     }
     /// Gets all configured butler install locations in a vec
@@ -594,8 +566,7 @@ impl Butler {
             "verbose":false
         })
                 .to_string(),
-            )
-            .expect("Couldn't check updates");
+            )?;
         pres(cuis)
     }
     /// Cancels an install. Needs an install id. Result is true if cancel succeeded
@@ -626,14 +597,13 @@ impl Butler {
             game: game,
             upload: upload,
         };
-        let rstr = serde_json::to_string(&req).unwrap();
+        let rstr = serde_json::to_string(&req)?;
         let qis = self
-            .request("/call/Install.Queue", rstr)
-            .expect("Couldn't queue game for download");
+            .request("/call/Install.Queue", rstr)?;
         pres(qis)
     }
     /// Performs an Install. Download must be completed beforehand
-    pub fn install_perform<N>(&self, queue_id: N, staging_folder: N)
+    pub fn install_perform<N>(&self, queue_id: N, staging_folder: N) -> Result<()>
     where
         N: Into<String>,
     {
@@ -643,8 +613,8 @@ impl Butler {
                 "id":queue_id.into(),
                 "stagingFolder": staging_folder.into()})
             .to_string(),
-        )
-        .expect("Couldn't perform install");
+        )?;
+        Ok(())
     }
     /// Fetches all uploads for a game
     pub fn fetch_uploads(&self, game_id: i32, compatible: bool) -> Result<Vec<Upload>> {
@@ -657,23 +627,22 @@ impl Butler {
                 "fresh": true
             })
                 .to_string(),
-            )
-            .expect("Couldn't fetch game uploads");
+            )?;
         parse_r(uis, "uploads")
     }
     /// Queues a download to later be downloaded by downloads_drive
-    pub fn download_queue(&self, i_queue: QueueResponse) {
+    pub fn download_queue(&self, i_queue: QueueResponse) -> Result<()> {
         self.request(
             "/call/Downloads.Queue",
             json!({
-                "item": serde_json::to_string(&i_queue).unwrap()
+                "item": serde_json::to_string(&i_queue)?
             })
             .to_string(),
-        )
-        .expect("Couldn't queue download");
+        )?;
+        Ok(())
     }
     /// Downloads all games in the queue. Completes when they are all done
-    pub fn downloads_drive(&self) {
+    pub fn downloads_drive(&self) -> Result<()> {
         let uri = "http://".to_string() + &self.address + "/call/Downloads.Drive";
         let mut builder = hyper::Request::builder();
         builder.method("POST");
@@ -685,81 +654,82 @@ impl Butler {
         let mut done = false;
         while !done {
             ::std::thread::sleep_ms(1000);
-            self.clear_completed();
+            self.clear_completed()?;
             let ds = self.downloads_list();
             if ds.is_err() {
                 done = true;
             }
         }
+        Ok(())
     }
     /// Cancels driving downloads. Returns bool indicating success.
     pub fn cancel_download_drive(&self) -> Result<bool> {
         self.res_preq("/call/Downloads.Drive.Cancel", vec![], "didCancel")
     }
     /// Forces butler's online/offline state. True is offline, False is online
-    pub fn set_offline(&self, online: bool) {
+    pub fn set_offline(&self, online: bool) -> Result<()> {
         self.request(
             "/call/Network.SetSimulateOffline",
             json!({ "enabled": online }).to_string(),
-        )
-        .expect("Couldn't change butler's network status");
+        )?;
+        Ok(())
     }
     /// Discards one download
-    pub fn discard_download<N>(&self, download_id: N)
+    pub fn discard_download<N>(&self, download_id: N) -> Result<()>
     where
         N: Into<String>,
     {
         self.request(
             "/call/Downloads.Discard",
             json!({ "downloadId": download_id.into() }).to_string(),
-        )
-        .expect("Couldn't discard download");
+        )?;
+        Ok(())
     }
     /// Prioritizes by download id
-    pub fn prioritize_download<N>(&self, download_id: N)
+    pub fn prioritize_download<N>(&self, download_id: N) -> Result<()>
     where
         N: Into<String>,
     {
         self.request(
             "/call/Downloads.Prioritize",
             json!({ "downloadId": download_id.into() }).to_string(),
-        )
-        .expect("Couldn't prioritize download");
+        )?;
+        Ok(())
     }
     /// Retries an errored download id
-    pub fn download_retry<N>(&self, download_id: N)
+    pub fn download_retry<N>(&self, download_id: N) -> Result<()>
     where
         N: Into<String>,
     {
         self.request(
             "/call/Downloads.Retry",
             json!({ "downloadId": download_id.into() }).to_string(),
-        )
-        .expect("Couldn't retry download");
+        )?;
+        Ok(())
     }
     /// Gets butler version strings
     pub fn get_version(&self) -> Result<VersionInfo> {
         self.res_req("/call/Version.Get", vec![])
     }
     /// Clears all completed downloads from the queue
-    pub fn clear_completed(&self) {
-        self.request("/call/Downloads.ClearFinished", "{}".to_string())
-            .expect("Couldn't clear completed donwloads");
+    pub fn clear_completed(&self) -> Result<()>{
+        self.request("/call/Downloads.ClearFinished", "{}".to_string())?;
+        Ok(())
     }
     /// A helper function that performs all of the game installation/download steps for you.
     /// Recommended over doing installation yourself.
-    pub fn install_game<N>(&self, game: Game, install_location_id: N, upload: Upload)
+    pub fn install_game<N>(&self, game: Game, install_location_id: N, upload: Upload) -> Result<()>
     where
         N: Into<String>,
     {
         let inf = self
-            .install_queue(game, install_location_id, upload, DownloadReason::Install)
-            .unwrap();
+            .install_queue(game, install_location_id, upload, DownloadReason::Install)?;
         let id = inf.id.clone();
         let stf = inf.staging_folder.clone();
-        self.download_queue(inf);
-        self.downloads_drive();
-        self.install_perform(id, stf);
+        self.download_queue(inf)?;
+        self.downloads_drive()?;
+        self.install_perform(id, stf)?;
+        Ok(())
     }
     /// Fetches a vec of Downloads from the queue, returning a BError if none are available
     pub fn downloads_list(&self) -> Result<Vec<Download>> {
@@ -778,8 +748,7 @@ impl Butler {
             "query":query.into()
         })
                 .to_string(),
-            )
-            .unwrap();
+            )?;
         parse_r(gis, "games")
     }
     /// Adds a new install location
@@ -831,9 +800,9 @@ impl Butler {
         if body.len() < 1 {
             b = "{}".to_string();
         } else {
-            b = serde_json::to_string(&mp(body)).unwrap();
+            b = serde_json::to_string(&mp(body))?;
         }
-        let ris = self.request(url.into(), b).unwrap();
+        let ris = self.request(url.into(), b)?;
         let res = pres(ris);
         res
     }
@@ -846,9 +815,9 @@ impl Butler {
         if body.len() < 1 {
             b = "{}".to_string();
         } else {
-            b = serde_json::to_string(&mp(body)).unwrap();
+            b = serde_json::to_string(&mp(body))?;
         }
-        let ris = self.request(url, b).unwrap();
+        let ris = self.request(url, b)?;
         let res = parse_r(ris, field);
         res
     }
@@ -874,18 +843,11 @@ where
     let res: ::std::result::Result<ResponseRes, serde_json::Error> = serde_json::from_str(&st);
     if res.is_ok() {
         return Ok(
-            serde_json::from_str(&serde_json::to_string(&res.unwrap().result).unwrap()).unwrap(),
+            serde_json::from_str(&serde_json::to_string(&res.unwrap().result)?)?
         );
     } else {
-        let err: ::std::result::Result<ResponseErr, serde_json::Error> = serde_json::from_str(&st);
-        if err.is_ok() {
-            return Err(err.unwrap().error);
-        } else {
-            return Err(BError {
-                message: st,
-                code: -1,
-            });
-        }
+        let err: ResponseErr = serde_json::from_str(&st)?;
+        return Err(ButlerError(err.error).into());
     }
 }
 fn parse_r<T, N>(st: String, prop: N) -> Result<T>
@@ -899,24 +861,14 @@ where
         let result = response.unwrap().result;
         if result.contains_key(&prop) {
             let finish =
-                serde_json::from_str(&serde_json::to_string(&result[&prop]).unwrap()).unwrap();
+                serde_json::from_str(&serde_json::to_string(&result[&prop])?)?;
             return Ok(finish);
         } else {
-            return Err(BError {
-                message: "Not Found".to_string(),
-                code: -2,
-            });
+            return Err(MissingField(prop).into());
         }
     } else {
-        let err: ::std::result::Result<ResponseErr, serde_json::Error> = serde_json::from_str(&st);
-        if err.is_ok() {
-            return Err(err.unwrap().error);
-        } else {
-            return Err(BError {
-                message: st,
-                code: -1,
-            });
-        }
+        let err: ResponseErr = serde_json::from_str(&st)?;
+        return Err(ButlerError(err.error).into());
     }
 }
 /// A helper function to create a map easily for use with res_req
