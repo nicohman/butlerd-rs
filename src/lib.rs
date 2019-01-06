@@ -3,8 +3,7 @@
 //! It provides methods for almost every API call that can be made.
 //! Right now, replying to events from butler isn't implemented yet. This means that you can't log
 //! in using an username/password if a captcha gets triggered or if a 2factor token is required.
-//! Currently working on fixing this, but I'm still not very certain as to how this should be
-//! implemented. Open to suggestions.
+//! Currently working on fixing this.
 extern crate reqwest;
 use std::process::Command;
 #[macro_use]
@@ -16,6 +15,7 @@ extern crate rand;
 extern crate regex;
 #[macro_use]
 extern crate error_chain;
+extern crate dirs;
 extern crate serde;
 use regex::Regex;
 use reqwest::Method;
@@ -26,11 +26,11 @@ use std::result::Result::*;
 pub mod Responses;
 pub mod error;
 use error::*;
-use ErrorKind::*;
 use hyper::Client;
 use serde_json::value::Map;
 use std::collections::HashMap;
 use std::fs;
+use ErrorKind::*;
 use Responses::*;
 #[cfg(target_os = "macos")]
 static DB_PATH: &str = "~/Library/Application Support/itch/db/butler.db";
@@ -103,8 +103,7 @@ impl Butler {
         let reg = Regex::new(r"\{(?:.|\s)+\}").unwrap();
         while !finish {
             bd = String::new();
-            fs::File::open(log_path)?
-                .read_to_string(&mut bd)?;
+            fs::File::open(log_path)?.read_to_string(&mut bd)?;
             let res = reg.find(&bd);
             if res.is_some() {
                 finish = true;
@@ -178,26 +177,20 @@ impl Butler {
         self.request("/Meta.Shutdown", "{}".to_string())
             .expect("Couldn't shut down butler daemon");;
     }
-    fn make_request<N>(
-        &self,
-        method: Method,
-        path: N,
-        params: N,
-        client: &str,
-    ) -> Result<String>
+    fn make_request<N>(&self, method: Method, path: N, params: N, client: &str) -> Result<String>
     where
         N: Into<String>,
     {
         let client_use = match client {
             "launch" => &self.client_launch,
-            _ => &self.client
+            _ => &self.client,
         };
         let url = "http://".to_string() + &self.address.clone() + &path.into();
-            let mut res = client_use
-                .request(method.into(), &url)
-                .body(params.into())
-                .send()?;
-                Ok(res.text().unwrap())
+        let mut res = client_use
+            .request(method.into(), &url)
+            .body(params.into())
+            .send()?;
+        Ok(res.text().unwrap())
     }
     fn request<S, N>(&self, path: S, params: N) -> Result<String>
     where
@@ -291,19 +284,18 @@ impl Butler {
         roots: Vec<String>,
         whitelist: Vec<String>,
     ) -> Result<Vec<CleanDownloadsEntry>> {
-        let cis = self
-            .request(
-                "/call/CleanDownloads.Search",
-                json!({
+        let cis = self.request(
+            "/call/CleanDownloads.Search",
+            json!({
             "roots":roots,
             "whitelist":whitelist
         })
-                .to_string(),
-            )?;
+            .to_string(),
+        )?;
         parse_r(cis, "entries")
     }
     /// Cleans specified CleanDownloadsEntries
-    pub fn clean_apply(&self, entries: Vec<CleanDownloadsEntry>) -> Result<()>{
+    pub fn clean_apply(&self, entries: Vec<CleanDownloadsEntry>) -> Result<()> {
         self.request(
             "/call/CleanDownloads.Apply",
             json!({ "entries": entries }).to_string(),
@@ -315,29 +307,30 @@ impl Butler {
     where
         N: Into<String>,
     {
-        let gis = self
-            .request(
-                "/call/Profile.Data.Get",
-                json!({
+        let gis = self.request(
+            "/call/Profile.Data.Get",
+            json!({
             "profileId":profile_id,
             "key":key.into()
         })
-                .to_string(),
-            )?;
+            .to_string(),
+        )?;
         parse_r(gis, "value")
     }
     /// Removes a profile's saved info. Also removes it from profile_list. Returns true if
     /// successful.
     pub fn profile_forget(&self, profile_id: i32) -> Result<bool> {
-        let sis = self
-            .request(
-                "/call/Profile.Forget",
-                json!({ "profileId": profile_id }).to_string(),
-            )?;
+        let sis = self.request(
+            "/call/Profile.Forget",
+            json!({ "profileId": profile_id }).to_string(),
+        )?;
         parse_r(sis, "success")
     }
     /// Disables updates for a cave
-    pub fn snooze_cave<N>(&self, cave_id: N)-> Result<()> where N : Into<String> {
+    pub fn snooze_cave<N>(&self, cave_id: N) -> Result<()>
+    where
+        N: Into<String>,
+    {
         self.request(
             "/call/Snooze.Cave",
             json!({ "caveId": cave_id.into() }).to_string(),
@@ -346,11 +339,10 @@ impl Butler {
     }
     /// Logs into a profile using saved credentials
     pub fn login_saved(&self, profile_id: i32) -> Result<Profile> {
-        let pis = self
-            .request(
-                "/call/Profile.UseSavedLogin",
-                json!({ "profileId": profile_id }).to_string(),
-            )?;
+        let pis = self.request(
+            "/call/Profile.UseSavedLogin",
+            json!({ "profileId": profile_id }).to_string(),
+        )?;
         parse_r(pis, "profile")
     }
     /// Given an API key, logs into a profile and returns profile.
@@ -384,14 +376,13 @@ impl Butler {
     }
     /// Fetches a vec of games owned by a specific profile id
     pub fn fetch_profile_games(&self, profile_id: i32) -> Result<Vec<ProfileGame>> {
-        let pvs = self
-            .request(
-                "/call/Fetch.ProfileGames",
-                json!({
+        let pvs = self.request(
+            "/call/Fetch.ProfileGames",
+            json!({
                 "profileId": profile_id,
             })
-                .to_string(),
-            )?;
+            .to_string(),
+        )?;
         parse_r(pvs, "items")
     }
     /// Fetches download key
@@ -401,16 +392,15 @@ impl Butler {
         download_key_id: i32,
         fresh: bool,
     ) -> Result<DownloadKey> {
-        let dis = self
-            .request(
-                "/call/Fetch.DownloadKey",
-                json!({
+        let dis = self.request(
+            "/call/Fetch.DownloadKey",
+            json!({
             "profileId": profile_id,
             "downloadKeyId": download_key_id,
             "fresh":fresh
         })
-                .to_string(),
-            )?;
+            .to_string(),
+        )?;
         parse_r(dis, "downloadKey")
     }
     /// Fetches collection info. Does not include games
@@ -420,16 +410,15 @@ impl Butler {
         collection_id: i32,
         fresh: bool,
     ) -> Result<Collection> {
-        let cis = self
-            .request(
-                "/call/Fetch.Collection",
-                json!({
+        let cis = self.request(
+            "/call/Fetch.Collection",
+            json!({
             "profileId":profile_id,
             "collectionId":collection_id,
             "fresh":fresh
         })
-                .to_string(),
-            )?;
+            .to_string(),
+        )?;
         parse_r(cis, "collection")
     }
     /// Fetches all collections for a profile. Does not include games
@@ -438,15 +427,14 @@ impl Butler {
         profile_id: i32,
         fresh: bool,
     ) -> Result<Vec<Collection>> {
-        let cis = self
-            .request(
-                "/call/Fetch.Collection",
-                json!({
+        let cis = self.request(
+            "/call/Fetch.Collection",
+            json!({
             "profileId": profile_id,
             "fresh": fresh
         })
-                .to_string(),
-            )?;
+            .to_string(),
+        )?;
         parse_r(cis, "items")
     }
     /// Fetches games in a collection
@@ -456,34 +444,28 @@ impl Butler {
         collection_id: i32,
         fresh: bool,
     ) -> Result<Vec<CollectionGame>> {
-        let cis = self
-            .request(
-                "/call/Fetch.Collection.Games",
-                json!({
+        let cis = self.request(
+            "/call/Fetch.Collection.Games",
+            json!({
             "profileId": profile_id,
             "collectionId": collection_id,
             "fresh":fresh
         })
-                .to_string(),
-            )?;
+            .to_string(),
+        )?;
         parse_r(cis, "items")
     }
     /// Fetches owned download keys for a profile. Pass fresh as true to force butler to refresh
     /// cache
-    pub fn fetch_profile_keys(
-        &self,
-        profile_id: i32,
-        fresh: bool,
-    ) -> Result<Vec<DownloadKey>> {
-        let dis = self
-            .request(
-                "/call/Fetch.ProfileOwnedKeys",
-                json!({
+    pub fn fetch_profile_keys(&self, profile_id: i32, fresh: bool) -> Result<Vec<DownloadKey>> {
+        let dis = self.request(
+            "/call/Fetch.ProfileOwnedKeys",
+            json!({
             "profileId": profile_id,
             "fresh":fresh
         })
-                .to_string(),
-            )?;
+            .to_string(),
+        )?;
         parse_r(dis, "items")
     }
     /// Marks all local data as 'stale' and outdated
@@ -495,15 +477,14 @@ impl Butler {
     where
         N: Into<String>,
     {
-        let uis = self
-            .request(
-                "/call/Search.Users",
-                json!({
+        let uis = self.request(
+            "/call/Search.Users",
+            json!({
             "profileId":profile_id,
             "query":query.into()
         })
-                .to_string(),
-            )?;
+            .to_string(),
+        )?;
         parse_r(uis, "users")
     }
     fn req_h<N>(&self, path: N)
@@ -534,14 +515,13 @@ impl Butler {
     }
     /// Fetches the best available sale for a game(if such a sale exists)
     pub fn fetch_sale(&self, game_id: i32) -> Result<Sale> {
-        let sls = self
-            .request(
-                "/call/Fetch.Sale",
-                json!({
+        let sls = self.request(
+            "/call/Fetch.Sale",
+            json!({
                 "gameId": game_id,
             })
-                .to_string(),
-            )?;
+            .to_string(),
+        )?;
         parse_r(sls, "sale")
     }
     /// Gets all configured butler install locations in a vec
@@ -558,15 +538,14 @@ impl Butler {
     /// Checks if an update is available for a vec of Caves. If you pass an empty vec, all caves
     /// will be checked.
     pub fn check_update(&self, cave_ids: Vec<String>) -> Result<CheckUpdate> {
-        let cuis = self
-            .request(
-                "/call/CheckUpdate",
-                json!({
+        let cuis = self.request(
+            "/call/CheckUpdate",
+            json!({
             "caveIds":cave_ids,
             "verbose":false
         })
-                .to_string(),
-            )?;
+            .to_string(),
+        )?;
         pres(cuis)
     }
     /// Cancels an install. Needs an install id. Result is true if cancel succeeded
@@ -598,8 +577,7 @@ impl Butler {
             upload: upload,
         };
         let rstr = serde_json::to_string(&req)?;
-        let qis = self
-            .request("/call/Install.Queue", rstr)?;
+        let qis = self.request("/call/Install.Queue", rstr)?;
         pres(qis)
     }
     /// Performs an Install. Download must be completed beforehand
@@ -618,16 +596,15 @@ impl Butler {
     }
     /// Fetches all uploads for a game
     pub fn fetch_uploads(&self, game_id: i32, compatible: bool) -> Result<Vec<Upload>> {
-        let uis = self
-            .request(
-                "/call/Fetch.GameUploads",
-                json!({
+        let uis = self.request(
+            "/call/Fetch.GameUploads",
+            json!({
                 "gameId": game_id,
                 "compatible": compatible,
                 "fresh": true
             })
-                .to_string(),
-            )?;
+            .to_string(),
+        )?;
         parse_r(uis, "uploads")
     }
     /// Queues a download to later be downloaded by downloads_drive
@@ -712,7 +689,7 @@ impl Butler {
         self.res_req("/call/Version.Get", vec![])
     }
     /// Clears all completed downloads from the queue
-    pub fn clear_completed(&self) -> Result<()>{
+    pub fn clear_completed(&self) -> Result<()> {
         self.request("/call/Downloads.ClearFinished", "{}".to_string())?;
         Ok(())
     }
@@ -722,8 +699,7 @@ impl Butler {
     where
         N: Into<String>,
     {
-        let inf = self
-            .install_queue(game, install_location_id, upload, DownloadReason::Install)?;
+        let inf = self.install_queue(game, install_location_id, upload, DownloadReason::Install)?;
         let id = inf.id.clone();
         let stf = inf.staging_folder.clone();
         self.download_queue(inf)?;
@@ -740,15 +716,14 @@ impl Butler {
     where
         N: Into<String>,
     {
-        let gis = self
-            .request(
-                "/call/Seach.Games",
-                json!({
+        let gis = self.request(
+            "/call/Seach.Games",
+            json!({
             "profileId":profile_id,
             "query":query.into()
         })
-                .to_string(),
-            )?;
+            .to_string(),
+        )?;
         parse_r(gis, "games")
     }
     /// Adds a new install location
@@ -796,7 +771,7 @@ impl Butler {
         T: DeserializeOwned,
         N: Into<String>,
     {
-        let mut b = String::new();
+        let mut b: String;
         if body.len() < 1 {
             b = "{}".to_string();
         } else {
@@ -811,7 +786,7 @@ impl Butler {
         T: DeserializeOwned,
         N: Into<String>,
     {
-        let mut b = String::new();
+        let mut b: String;
         if body.len() < 1 {
             b = "{}".to_string();
         } else {
@@ -823,7 +798,7 @@ impl Butler {
     }
 }
 fn get_home() -> String {
-    return String::from(env::home_dir().unwrap().to_str().unwrap());
+    return String::from(dirs::home_dir().unwrap().to_str().unwrap());
 }
 /// Translates a DownloadReason into a string to be used by the butler API
 fn dr_str(r: DownloadReason) -> String {
@@ -842,9 +817,9 @@ where
 {
     let res: ::std::result::Result<ResponseRes, serde_json::Error> = serde_json::from_str(&st);
     if res.is_ok() {
-        return Ok(
-            serde_json::from_str(&serde_json::to_string(&res.unwrap().result)?)?
-        );
+        return Ok(serde_json::from_str(&serde_json::to_string(
+            &res.unwrap().result,
+        )?)?);
     } else {
         let err: ResponseErr = serde_json::from_str(&st)?;
         return Err(ButlerError(err.error).into());
@@ -860,8 +835,7 @@ where
     if response.is_ok() {
         let result = response.unwrap().result;
         if result.contains_key(&prop) {
-            let finish =
-                serde_json::from_str(&serde_json::to_string(&result[&prop])?)?;
+            let finish = serde_json::from_str(&serde_json::to_string(&result[&prop])?)?;
             return Ok(finish);
         } else {
             return Err(MissingField(prop).into());
