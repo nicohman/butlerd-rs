@@ -173,9 +173,9 @@ impl Butler {
         }
     }
     ///Shuts down butler daemon.
-    pub fn close(&self) {
-        self.request("/Meta.Shutdown", "{}".to_string())
-            .expect("Couldn't shut down butler daemon");;
+    pub fn close(&self) -> Result<()> {
+        self.request("/Meta.Shutdown", "{}".to_string())?;
+        Ok(())
     }
     fn make_request(
         &self,
@@ -207,9 +207,7 @@ impl Butler {
     }
     ///Fetches specific game by id
     pub fn fetch_game(&self, game_id: i32) -> Result<Game> {
-        let gvs = self
-            .request("/call/Fetch.Game", json!({ "gameId": game_id }).to_string())
-            .expect("Couldn't fetch game by id");
+        let gvs = self.request("/call/Fetch.Game", json!({ "gameId": game_id }).to_string())?;
         parse_r(gvs, "game")
     }
     ///Fetches specific cave by id
@@ -687,20 +685,20 @@ impl Butler {
         parse_r(gis, "games")
     }
     /// Adds a new install location
-    pub fn install_location_add(&self, path: impl Into<String>) {
+    pub fn install_location_add(&self, path: impl Into<String>) -> Result<()> {
         self.request(
             "/call/Install.Locations.Add",
             json!({ "path": path.into() }).to_string(),
-        )
-        .expect("Couldn't add new install location");
+        )?;
+        Ok(())
     }
     /// Removes an install location
-    pub fn install_location_remove(&self, id: impl Into<String>) {
+    pub fn install_location_remove(&self, id: impl Into<String>) -> Result<()> {
         self.request(
             "/call/Install.Locations.Remove",
             json!({ "id": id.into() }).to_string(),
-        )
-        .expect("Couldn't remove install location");
+        )?;
+        Ok(())
     }
     /// Gets an install location from a previously fetched id
     pub fn install_location_get_by_id(
@@ -710,12 +708,12 @@ impl Butler {
         self.res_req("/call/Install.Locations.GetByID", vec![("id", &id.into())])
     }
     /// Uninstalls a cave
-    pub fn uninstall(&self, cave_id: impl Into<String>) {
+    pub fn uninstall(&self, cave_id: impl Into<String>) -> Result<()> {
         self.request(
             "/call/Uninstall.Perform",
             json!({ "caveId": &cave_id.into() }).to_string(),
-        )
-        .expect("Couldn't uninstall cave");
+        )?;
+        Ok(())
     }
     fn res_req<T>(&self, url: impl Into<String>, body: Vec<(&str, &str)>) -> Result<T>
     where
