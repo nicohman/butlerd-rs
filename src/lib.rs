@@ -3,8 +3,7 @@
 //! It provides methods for almost every API call that can be made.
 //! Right now, replying to events from butler isn't implemented yet. This means that you can't log
 //! in using an username/password if a captcha gets triggered or if a 2factor token is required.
-//! Currently working on fixing this, but I'm still not very certain as to how this should be
-//! implemented. Open to suggestions.
+//! Currently working on fixing this.
 extern crate reqwest;
 use std::process::Command;
 #[macro_use]
@@ -276,6 +275,7 @@ impl Butler {
         let cis = self.request(
             "/call/CleanDownloads.Search",
             json!({
+
                 "roots":roots,
                 "whitelist":whitelist
             })
@@ -428,6 +428,7 @@ impl Butler {
         let cis = self.request(
             "/call/Fetch.Collection.Games",
             json!({
+
                 "profileId": profile_id,
                 "collectionId": collection_id,
                 "fresh":fresh
@@ -442,6 +443,7 @@ impl Butler {
         let dis = self.request(
             "/call/Fetch.ProfileOwnedKeys",
             json!({
+
                 "profileId": profile_id,
                 "fresh":fresh
             })
@@ -513,6 +515,7 @@ impl Butler {
         let cuis = self.request(
             "/call/CheckUpdate",
             json!({
+
                 "caveIds":cave_ids,
                 "verbose":false
             })
@@ -738,6 +741,7 @@ impl Butler {
         T: DeserializeOwned,
     {
         let b: String;
+
         if body.len() < 1 {
             b = "{}".to_string();
         } else {
