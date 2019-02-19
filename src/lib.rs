@@ -177,10 +177,13 @@ impl Butler {
         self.request("/Meta.Shutdown", "{}".to_string())
             .expect("Couldn't shut down butler daemon");;
     }
-    fn make_request<N>(&self, method: Method, path: N, params: N, client: &str) -> Result<String>
-    where
-        N: Into<String>,
-    {
+    fn make_request(
+        &self,
+        method: Method,
+        path: impl Into<String>,
+        params: impl Into<String>,
+        client: &str,
+    ) -> Result<String> {
         let client_use = match client {
             "launch" => &self.client_launch,
             _ => &self.client,
@@ -192,18 +195,10 @@ impl Butler {
             .send()?;
         Ok(res.text().unwrap())
     }
-    fn request<S, N>(&self, path: S, params: N) -> Result<String>
-    where
-        S: Into<String>,
-        N: Into<String>,
-    {
+    fn request(&self, path: impl Into<String>, params: impl Into<String>) -> Result<String> {
         self.make_request(POST, path.into(), params.into(), "default")
     }
-    fn request_l<S, N>(&self, path: S, params: N) -> Result<String>
-    where
-        S: Into<String>,
-        N: Into<String>,
-    {
+    fn request_l(&self, path: impl Into<String>, params: impl Into<String>) -> Result<String> {
         self.make_request(POST, path.into(), params.into(), "launch")
     }
     /// Fetchs all installed caves
@@ -218,10 +213,7 @@ impl Butler {
         parse_r(gvs, "game")
     }
     ///Fetches specific cave by id
-    pub fn fetch_cave<N>(&self, cave_id: N) -> Result<Cave>
-    where
-        N: Into<String>,
-    {
+    pub fn fetch_cave(&self, cave_id: impl Into<String>) -> Result<Cave> {
         self.res_preq(
             "/call/Fetch.Cave",
             vec![("caveId", &cave_id.into())],
@@ -229,10 +221,7 @@ impl Butler {
         )
     }
     /// Makes a cave 'pinned' or not depending on pinned
-    pub fn pin_cave<N>(&self, cave_id: N, pinned: bool) -> Result<()>
-    where
-        N: Into<String>,
-    {
+    pub fn pin_cave(&self, cave_id: impl Into<String>, pinned: bool) -> Result<()> {
         self.request(
             "/call/Caves.SetPinned",
             json!({
@@ -244,10 +233,7 @@ impl Butler {
         Ok(())
     }
     /// Launches game by CaveID. Note that this will not complete until the game is closed.
-    pub fn launch_game<N>(&self, cave_id: N) -> Result<()>
-    where
-        N: Into<String>,
-    {
+    pub fn launch_game(&self, cave_id: impl Into<String>) -> Result<()> {
         self.request_l(
             "/call/Launch",
             json!({
@@ -263,10 +249,12 @@ impl Butler {
         self.res_preq("/call/Profile.List", vec![], "profiles")
     }
     /// Sets a specific profile info value
-    pub fn profile_put<N>(&self, profile_id: i32, key: N, value: N) -> Result<()>
-    where
-        N: Into<String>,
-    {
+    pub fn profile_put(
+        &self,
+        profile_id: i32,
+        key: impl Into<String>,
+        value: impl Into<String>,
+    ) -> Result<()> {
         self.request(
             "/call/Profile.Data.Put",
             json!({
@@ -303,10 +291,7 @@ impl Butler {
         Ok(())
     }
     /// Gets a specific profile info value
-    pub fn profile_get<N>(&self, profile_id: i32, key: N) -> Result<String>
-    where
-        N: Into<String>,
-    {
+    pub fn profile_get(&self, profile_id: i32, key: impl Into<String>) -> Result<String> {
         let gis = self.request(
             "/call/Profile.Data.Get",
             json!({
@@ -327,10 +312,7 @@ impl Butler {
         parse_r(sis, "success")
     }
     /// Disables updates for a cave
-    pub fn snooze_cave<N>(&self, cave_id: N) -> Result<()>
-    where
-        N: Into<String>,
-    {
+    pub fn snooze_cave(&self, cave_id: impl Into<String>) -> Result<()> {
         self.request(
             "/call/Snooze.Cave",
             json!({ "caveId": cave_id.into() }).to_string(),
@@ -346,10 +328,7 @@ impl Butler {
         parse_r(pis, "profile")
     }
     /// Given an API key, logs into a profile and returns profile.
-    pub fn login_api_key<N>(&self, api_key: N) -> Result<Profile>
-    where
-        N: Into<String>,
-    {
+    pub fn login_api_key(&self, api_key: impl Into<String>) -> Result<Profile> {
         self.res_preq(
             "/call/Profile.LoginWithAPIKey",
             vec![("apiKey", &api_key.into())],
@@ -358,10 +337,11 @@ impl Butler {
     }
     /// Given an username and password, logs into a profile and returns profile and cookie. May
     /// fail if a captcha or 2factor is required. Working on fix.
-    pub fn login_password<N>(&self, username: N, password: N) -> Result<PassLogRes>
-    where
-        N: Into<String>,
-    {
+    pub fn login_password(
+        &self,
+        username: impl Into<String>,
+        password: impl Into<String>,
+    ) -> Result<PassLogRes> {
         Ok(self.res_req(
             "/call/Profile.LoginWithPassword",
             vec![
@@ -473,7 +453,7 @@ impl Butler {
         self.req_h("Fetch.ExpireAll");
     }
     /// Searches users
-    pub fn search_users<N>(&self, profile_id: i32, query: N) -> Result<Vec<User>>
+    pub fn search_users<N>(&self, profile_id: i32, query: impl Into<String>) -> Result<Vec<User>>
     where
         N: Into<String>,
     {
@@ -487,10 +467,7 @@ impl Butler {
         )?;
         parse_r(uis, "users")
     }
-    fn req_h<N>(&self, path: N)
-    where
-        N: Into<String>,
-    {
+    fn req_h(&self, path: impl Into<String>) {
         let uri = "http://".to_string() + &self.address + "/call/" + &path.into();
         let mut builder = hyper::Request::builder();
         builder.method("POST");
@@ -529,10 +506,7 @@ impl Butler {
         self.res_preq("/call/Install.Locations.List", vec![], "installLocations")
     }
     /// Gets info on a filesystem
-    pub fn statfs<N>(&self, path: N) -> Result<FsInfo>
-    where
-        N: Into<String>,
-    {
+    pub fn statfs(&self, path: impl Into<String>) -> Result<FsInfo> {
         self.res_req("/call/System.StatFS", vec![("path", &path.into())])
     }
     /// Checks if an update is available for a vec of Caves. If you pass an empty vec, all caves
@@ -560,16 +534,13 @@ impl Butler {
         )
     }
     /// Queues up a game installation
-    pub fn install_queue<N>(
+    pub fn install_queue(
         &self,
         game: Game,
-        install_location_id: N,
+        install_location_id: impl Into<String>,
         upload: Upload,
         reason: DownloadReason,
-    ) -> Result<QueueResponse>
-    where
-        N: Into<String>,
-    {
+    ) -> Result<QueueResponse> {
         let req = InstallQueueReq {
             install_location_id: install_location_id.into(),
             reason: dr_str(reason),
@@ -581,10 +552,11 @@ impl Butler {
         pres(qis)
     }
     /// Performs an Install. Download must be completed beforehand
-    pub fn install_perform<N>(&self, queue_id: N, staging_folder: N) -> Result<()>
-    where
-        N: Into<String>,
-    {
+    pub fn install_perform(
+        &self,
+        queue_id: impl Into<String>,
+        staging_folder: impl Into<String>,
+    ) -> Result<()> {
         self.request(
             "/call/Install.Perform",
             json!({
@@ -652,10 +624,7 @@ impl Butler {
         Ok(())
     }
     /// Discards one download
-    pub fn discard_download<N>(&self, download_id: N) -> Result<()>
-    where
-        N: Into<String>,
-    {
+    pub fn discard_download(&self, download_id: impl Into<String>) -> Result<()> {
         self.request(
             "/call/Downloads.Discard",
             json!({ "downloadId": download_id.into() }).to_string(),
@@ -663,10 +632,7 @@ impl Butler {
         Ok(())
     }
     /// Prioritizes by download id
-    pub fn prioritize_download<N>(&self, download_id: N) -> Result<()>
-    where
-        N: Into<String>,
-    {
+    pub fn prioritize_download(&self, download_id: impl Into<String>) -> Result<()> {
         self.request(
             "/call/Downloads.Prioritize",
             json!({ "downloadId": download_id.into() }).to_string(),
@@ -674,10 +640,7 @@ impl Butler {
         Ok(())
     }
     /// Retries an errored download id
-    pub fn download_retry<N>(&self, download_id: N) -> Result<()>
-    where
-        N: Into<String>,
-    {
+    pub fn download_retry(&self, download_id: impl Into<String>) -> Result<()> {
         self.request(
             "/call/Downloads.Retry",
             json!({ "downloadId": download_id.into() }).to_string(),
@@ -695,10 +658,12 @@ impl Butler {
     }
     /// A helper function that performs all of the game installation/download steps for you.
     /// Recommended over doing installation yourself.
-    pub fn install_game<N>(&self, game: Game, install_location_id: N, upload: Upload) -> Result<()>
-    where
-        N: Into<String>,
-    {
+    pub fn install_game(
+        &self,
+        game: Game,
+        install_location_id: impl Into<String>,
+        upload: Upload,
+    ) -> Result<()> {
         let inf = self.install_queue(game, install_location_id, upload, DownloadReason::Install)?;
         let id = inf.id.clone();
         let stf = inf.staging_folder.clone();
@@ -712,10 +677,7 @@ impl Butler {
         self.res_preq("/call/Downloads.List", vec![], "downloads")
     }
     /// Searches games for string. Requires profileid.
-    pub fn search_games<N>(&self, profile_id: i32, query: N) -> Result<Vec<Game>>
-    where
-        N: Into<String>,
-    {
+    pub fn search_games(&self, profile_id: i32, query: impl Into<String>) -> Result<Vec<Game>> {
         let gis = self.request(
             "/call/Seach.Games",
             json!({
@@ -727,10 +689,7 @@ impl Butler {
         parse_r(gis, "games")
     }
     /// Adds a new install location
-    pub fn install_location_add<N>(&self, path: N)
-    where
-        N: Into<String>,
-    {
+    pub fn install_location_add(&self, path: impl Into<String>) {
         self.request(
             "/call/Install.Locations.Add",
             json!({ "path": path.into() }).to_string(),
@@ -738,10 +697,7 @@ impl Butler {
         .expect("Couldn't add new install location");
     }
     /// Removes an install location
-    pub fn install_location_remove<N>(&self, id: N)
-    where
-        N: Into<String>,
-    {
+    pub fn install_location_remove(&self, id: impl Into<String>) {
         self.request(
             "/call/Install.Locations.Remove",
             json!({ "id": id.into() }).to_string(),
@@ -749,27 +705,23 @@ impl Butler {
         .expect("Couldn't remove install location");
     }
     /// Gets an install location from a previously fetched id
-    pub fn install_location_get_by_id<N>(&self, id: N) -> Result<InstallLocationSummary>
-    where
-        N: Into<String>,
-    {
+    pub fn install_location_get_by_id(
+        &self,
+        id: impl Into<String>,
+    ) -> Result<InstallLocationSummary> {
         self.res_req("/call/Install.Locations.GetByID", vec![("id", &id.into())])
     }
     /// Uninstalls a cave
-    pub fn uninstall<N>(&self, cave_id: N)
-    where
-        N: Into<String>,
-    {
+    pub fn uninstall(&self, cave_id: impl Into<String>) {
         self.request(
             "/call/Uninstall.Perform",
             json!({ "caveId": &cave_id.into() }).to_string(),
         )
         .expect("Couldn't uninstall cave");
     }
-    fn res_req<T, N>(&self, url: N, body: Vec<(&str, &str)>) -> Result<T>
+    fn res_req<T>(&self, url: impl Into<String>, body: Vec<(&str, &str)>) -> Result<T>
     where
         T: DeserializeOwned,
-        N: Into<String>,
     {
         let mut b: String;
         if body.len() < 1 {
@@ -781,10 +733,14 @@ impl Butler {
         let res = pres(ris);
         res
     }
-    fn res_preq<T, N>(&self, url: N, body: Vec<(&str, &str)>, field: N) -> Result<T>
+    fn res_preq<T>(
+        &self,
+        url: impl Into<String>,
+        body: Vec<(&str, &str)>,
+        field: impl Into<String>,
+    ) -> Result<T>
     where
         T: DeserializeOwned,
-        N: Into<String>,
     {
         let mut b: String;
         if body.len() < 1 {
@@ -825,10 +781,9 @@ where
         return Err(ButlerError(err.error).into());
     }
 }
-fn parse_r<T, N>(st: String, prop: N) -> Result<T>
+fn parse_r<T>(st: String, prop: impl Into<String>) -> Result<T>
 where
     T: DeserializeOwned,
-    N: Into<String>,
 {
     let prop = prop.into();
     let response: ::std::result::Result<ResponseRes, serde_json::Error> = serde_json::from_str(&st);
