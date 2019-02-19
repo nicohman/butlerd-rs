@@ -10,12 +10,12 @@ use std::process::Command;
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
+extern crate dirs;
 extern crate hyper;
 extern crate rand;
 extern crate regex;
 #[macro_use]
 extern crate error_chain;
-extern crate dirs;
 extern crate serde;
 use regex::Regex;
 use reqwest::Method;
@@ -173,9 +173,9 @@ impl Butler {
         }
     }
     ///Shuts down butler daemon.
-    pub fn close(&self) {
-        self.request("/Meta.Shutdown", "{}".to_string())
-            .expect("Couldn't shut down butler daemon");;
+    pub fn close(&self) -> Result<()> {
+        self.request("/Meta.Shutdown", "{}".to_string())?;
+        Ok(())
     }
     fn make_request(
         &self,
@@ -207,9 +207,7 @@ impl Butler {
     }
     ///Fetches specific game by id
     pub fn fetch_game(&self, game_id: i32) -> Result<Game> {
-        let gvs = self
-            .request("/call/Fetch.Game", json!({ "gameId": game_id }).to_string())
-            .expect("Couldn't fetch game by id");
+        let gvs = self.request("/call/Fetch.Game", json!({ "gameId": game_id }).to_string())?;
         parse_r(gvs, "game")
     }
     ///Fetches specific cave by id
@@ -225,9 +223,9 @@ impl Butler {
         self.request(
             "/call/Caves.SetPinned",
             json!({
-            "caveId":cave_id.into(),
-            "pinned":pinned
-        })
+                "caveId":cave_id.into(),
+                "pinned":pinned
+            })
             .to_string(),
         )?;
         Ok(())
@@ -275,9 +273,10 @@ impl Butler {
         let cis = self.request(
             "/call/CleanDownloads.Search",
             json!({
-            "roots":roots,
-            "whitelist":whitelist
-        })
+
+                "roots":roots,
+                "whitelist":whitelist
+            })
             .to_string(),
         )?;
         parse_r(cis, "entries")
@@ -295,9 +294,9 @@ impl Butler {
         let gis = self.request(
             "/call/Profile.Data.Get",
             json!({
-            "profileId":profile_id,
-            "key":key.into()
-        })
+                "profileId":profile_id,
+                "key":key.into()
+            })
             .to_string(),
         )?;
         parse_r(gis, "value")
@@ -375,10 +374,10 @@ impl Butler {
         let dis = self.request(
             "/call/Fetch.DownloadKey",
             json!({
-            "profileId": profile_id,
-            "downloadKeyId": download_key_id,
-            "fresh":fresh
-        })
+                "profileId": profile_id,
+                "downloadKeyId": download_key_id,
+                "fresh":fresh
+            })
             .to_string(),
         )?;
         parse_r(dis, "downloadKey")
@@ -393,10 +392,10 @@ impl Butler {
         let cis = self.request(
             "/call/Fetch.Collection",
             json!({
-            "profileId":profile_id,
-            "collectionId":collection_id,
-            "fresh":fresh
-        })
+                "profileId":profile_id,
+                "collectionId":collection_id,
+                "fresh":fresh
+            })
             .to_string(),
         )?;
         parse_r(cis, "collection")
@@ -410,9 +409,9 @@ impl Butler {
         let cis = self.request(
             "/call/Fetch.Collection",
             json!({
-            "profileId": profile_id,
-            "fresh": fresh
-        })
+                "profileId": profile_id,
+                "fresh": fresh
+            })
             .to_string(),
         )?;
         parse_r(cis, "items")
@@ -427,10 +426,11 @@ impl Butler {
         let cis = self.request(
             "/call/Fetch.Collection.Games",
             json!({
-            "profileId": profile_id,
-            "collectionId": collection_id,
-            "fresh":fresh
-        })
+
+                "profileId": profile_id,
+                "collectionId": collection_id,
+                "fresh":fresh
+            })
             .to_string(),
         )?;
         parse_r(cis, "items")
@@ -441,9 +441,10 @@ impl Butler {
         let dis = self.request(
             "/call/Fetch.ProfileOwnedKeys",
             json!({
-            "profileId": profile_id,
-            "fresh":fresh
-        })
+
+                "profileId": profile_id,
+                "fresh":fresh
+            })
             .to_string(),
         )?;
         parse_r(dis, "items")
@@ -453,16 +454,13 @@ impl Butler {
         self.req_h("Fetch.ExpireAll");
     }
     /// Searches users
-    pub fn search_users<N>(&self, profile_id: i32, query: impl Into<String>) -> Result<Vec<User>>
-    where
-        N: Into<String>,
-    {
+    pub fn search_users(&self, profile_id: i32, query: impl Into<String>) -> Result<Vec<User>> {
         let uis = self.request(
             "/call/Search.Users",
             json!({
-            "profileId":profile_id,
-            "query":query.into()
-        })
+                "profileId":profile_id,
+                "query":query.into()
+            })
             .to_string(),
         )?;
         parse_r(uis, "users")
@@ -483,9 +481,9 @@ impl Butler {
         self.request(
             "/call/Network.SetBandwidthThrottle",
             json!({
-            "enabled":enabled,
-            "rate":rate
-        })
+                "enabled":enabled,
+                "rate":rate
+            })
             .to_string(),
         )?;
         Ok(())
@@ -515,18 +513,16 @@ impl Butler {
         let cuis = self.request(
             "/call/CheckUpdate",
             json!({
-            "caveIds":cave_ids,
-            "verbose":false
-        })
+
+                "caveIds":cave_ids,
+                "verbose":false
+            })
             .to_string(),
         )?;
         pres(cuis)
     }
     /// Cancels an install. Needs an install id. Result is true if cancel succeeded
-    pub fn install_cancel<N>(&self, id: N) -> Result<bool>
-    where
-        N: Into<String>,
-    {
+    pub fn install_cancel(&self, id: impl Into<String>) -> Result<bool> {
         self.res_preq(
             "/call/Install.Cancel",
             vec![("id", &id.into())],
@@ -681,28 +677,28 @@ impl Butler {
         let gis = self.request(
             "/call/Seach.Games",
             json!({
-            "profileId":profile_id,
-            "query":query.into()
-        })
+                "profileId":profile_id,
+                "query":query.into()
+            })
             .to_string(),
         )?;
         parse_r(gis, "games")
     }
     /// Adds a new install location
-    pub fn install_location_add(&self, path: impl Into<String>) {
+    pub fn install_location_add(&self, path: impl Into<String>) -> Result<()> {
         self.request(
             "/call/Install.Locations.Add",
             json!({ "path": path.into() }).to_string(),
-        )
-        .expect("Couldn't add new install location");
+        )?;
+        Ok(())
     }
     /// Removes an install location
-    pub fn install_location_remove(&self, id: impl Into<String>) {
+    pub fn install_location_remove(&self, id: impl Into<String>) -> Result<()> {
         self.request(
             "/call/Install.Locations.Remove",
             json!({ "id": id.into() }).to_string(),
-        )
-        .expect("Couldn't remove install location");
+        )?;
+        Ok(())
     }
     /// Gets an install location from a previously fetched id
     pub fn install_location_get_by_id(
@@ -712,18 +708,18 @@ impl Butler {
         self.res_req("/call/Install.Locations.GetByID", vec![("id", &id.into())])
     }
     /// Uninstalls a cave
-    pub fn uninstall(&self, cave_id: impl Into<String>) {
+    pub fn uninstall(&self, cave_id: impl Into<String>) -> Result<()> {
         self.request(
             "/call/Uninstall.Perform",
             json!({ "caveId": &cave_id.into() }).to_string(),
-        )
-        .expect("Couldn't uninstall cave");
+        )?;
+        Ok(())
     }
     fn res_req<T>(&self, url: impl Into<String>, body: Vec<(&str, &str)>) -> Result<T>
     where
         T: DeserializeOwned,
     {
-        let mut b: String;
+        let b: String;
         if body.len() < 1 {
             b = "{}".to_string();
         } else {
@@ -742,7 +738,8 @@ impl Butler {
     where
         T: DeserializeOwned,
     {
-        let mut b: String;
+        let b: String;
+
         if body.len() < 1 {
             b = "{}".to_string();
         } else {
