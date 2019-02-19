@@ -23,6 +23,8 @@ use serde::de::DeserializeOwned;
 use std::env;
 use std::io::Read;
 use std::result::Result::*;
+use std::thread::sleep;
+use std::time::Duration;
 pub mod Responses;
 pub mod error;
 use error::*;
@@ -74,9 +76,9 @@ impl Butler {
             log_path_proc = log_path_proc.replace("%TEMP%", &temp.unwrap().to_string());
         }
         let log_path = &(log_path_proc + &rand::random::<f64>().to_string() + ".log");
-        let mut file: fs::File;
+        let file: fs::File;
         if fs::remove_file(log_path).is_ok() {
-            file = fs::File::create(log_path)?;
+            fs::File::create(log_path)?;
         }
         if fs::metadata(log_path).is_ok() {
             if fs::remove_file(log_path).is_err() {
@@ -108,7 +110,7 @@ impl Butler {
             if res.is_some() {
                 finish = true;
             } else {
-                ::std::thread::sleep_ms(250);
+                sleep(Duration::from_millis(250));
             }
         }
         bd = reg.find(&bd).unwrap().as_str().to_string();
@@ -598,7 +600,7 @@ impl Butler {
         self.hclient.request(request);
         let mut done = false;
         while !done {
-            ::std::thread::sleep_ms(1000);
+            sleep(Duration::from_millis(1000));
             self.clear_completed()?;
             let ds = self.downloads_list();
             if ds.is_err() {
